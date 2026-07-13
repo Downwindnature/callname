@@ -44,7 +44,11 @@ input{font-family:inherit}
 .num{font-family:var(--font-disp);font-variant-numeric:tabular-nums}
 
 /* ---------- brand ---------- */
-.brand{display:flex;align-items:center;gap:12px;margin-bottom:4px}
+.brand{display:flex;justify-content:center;align-items:center;margin:2px 0 12px}
+.settings-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;margin-top:14px;padding:12px 14px;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;color:var(--ink);font:700 14px/1 var(--font-body);cursor:pointer}
+.settings-toggle:hover{background:rgba(255,255,255,.07)}
+.settings-toggle .chev{color:var(--ink-faint);font-size:12px}
+.settings-body{margin-top:12px;padding-top:14px;border-top:1px solid var(--line)}
 .brand .mark{
   width:46px;height:46px;border-radius:14px;flex:0 0 auto;display:grid;place-items:center;
   background:linear-gradient(140deg,var(--amber),var(--pink) 130%);
@@ -53,7 +57,7 @@ input{font-family:inherit}
 }
 .brand .mark::after{content:"";position:absolute;inset:0;background:linear-gradient(120deg,transparent 40%,rgba(255,255,255,.35) 50%,transparent 60%);transform:translateX(-120%);animation:sheen 4.5s ease-in-out infinite}
 @keyframes sheen{0%,60%{transform:translateX(-120%)}80%,100%{transform:translateX(120%)}}
-.brand .n{font:900 22px/1 var(--font-body)}
+.brand .n{font:900 24px/1 var(--font-body);text-align:center}
 .brand .t{font:600 12px/1.3 var(--font-disp);letter-spacing:.16em;color:var(--ink-faint);text-transform:uppercase;margin-top:3px}
 
 /* ---------- cards / panels ---------- */
@@ -308,9 +312,12 @@ const S = {
   localBotLevel: 'normal',
   localCount: 4,
   localGamesPer: 2,    // 本機：每人對戰場數（0＝全部）
+  localBotLang: 'zh-TW', // 本機：AI 名字語言（mix＝混合）
   createGamesPer: 2,   // 建立房間：每人對戰場數（0＝全部）
   micStream: null,     // 已授權的麥克風串流（避免每局重跳權限視窗）
   micReady: false,
+  editingNick: false,  // 正在修改暱稱
+  settingsOpen: false, // 房主設定是否展開
   acts: new Set(),     // 房主動作鎖（依 gameId 命名，避免重複寫入）
   lastKey: null,
   roomUnsub: null,
@@ -930,12 +937,33 @@ async function startGame(){
   await update(ref(db, 'rooms/' + S.roomId), upd);
 }
 
+/* 名字字元驗證：只允許該語言可發音的文字，擋掉符號、表情、亂碼 */
+const NAME_ALLOWED = {
+  'zh-TW': /^[\u3400-\u4DBF\u4E00-\u9FFF]+$/,               // 漢字
+  'zh-CN': /^[\u3400-\u4DBF\u4E00-\u9FFF]+$/,
+  'ja-JP': /^[\u3040-\u30FF\u4E00-\u9FFF\u3400-\u4DBFー]+$/, // 假名＋漢字
+  'ko-KR': /^[\uAC00-\uD7A3\u1100-\u11FF\u3130-\u318F]+$/,   // 諺文
+  'en-US': /^[A-Za-z][A-Za-z' -]*$/                          // 英文字母（可含空白、'、-）
+};
+function nameCharsValid(name, lang){
+  const re = NAME_ALLOWED[lang];
+  if (!re) return true;
+  const test = (lang==='en-US') ? name.trim() : name.replace(/\s+/g,'');
+  return re.test(test);
+}
+function nameCoreLen(name, lang){
+  return (lang==='en-US' ? name.replace(/[^A-Za-z]/g,'') : name.replace(/\s+/g,'')).length;
+}
+
 /* 送出自己的名字 */
 async function submitName(name, lang, reading){
   name = (name||'').trim();
-  const len = [...name].length;
-  if (len < NAME_MIN || len > NAME_MAX){ toast(`名字請 ${NAME_MIN}～${NAME_MAX} 字`, 'err'); return; }
   if (!lang){ toast('請選擇名字的語言', 'err'); return; }
+  const len = nameCoreLen(name, lang);
+  if (len < NAME_MIN || len > NAME_MAX){ toast(`名字請 ${NAME_MIN}～${NAME_MAX} 個字`, 'err'); return; }
+  if (!nameCharsValid(name, lang)){
+    toast('名字只能用該語言的文字，不能有符號、表情或空白亂碼', 'err'); return;
+  }
   reading = (reading||'').trim() || computeReading(name, lang);
   if (S.local){
     const p = S.room.players[S.uid];
@@ -1131,7 +1159,7 @@ function routeGame(r){
 }
 function computeKey(){
   if (!S.uid) return 'boot';
-  if (!S.nickname) return 'gate';
+  if (!S.nickname || S.editingNick) return 'gate';
   if (S.micTest) return 'mic-test';
   if (S.localSetup) return 'local-setup';
   if (S.local && S.room) return routeGame(S.room);
@@ -1166,22 +1194,23 @@ function buildScreen(key){
 }
 
 function brandHead(){
-  return `<div class="brand"><div class="mark">喊</div>
-    <div><div class="n">喊名對決</div><div class="t">Name Duel</div></div></div>`;
+  return `<div class="brand"><div class="n">喊名對決</div></div>`;
 }
 
 /* -------- 暱稱 -------- */
 function screenGate(){
+  const editing = S.editingNick && S.nickname;
   app.innerHTML = `
     ${brandHead()}
     <div class="grow"></div>
     <div class="card">
-      <div class="eyebrow">先取個暱稱</div>
+      <div class="eyebrow">${editing?'修改暱稱':'先取個暱稱'}</div>
       <h1 class="h1">你在房間裡的稱呼</h1>
       <p class="dim" style="margin:0 0 16px">這只是等待室用的名牌。遊戲開始後，你會再取一個「祕密名字」讓大家搶著喊。</p>
       <input id="nick" class="inp" maxlength="12" placeholder="例如：小風、Kai、たろう" value="${esc(S.nickname)}" />
       <div class="hint">1～12 字，可用中／英／日／韓</div>
-      <button class="btn btn-primary" data-action="saveNick" style="margin-top:16px">進入大廳</button>
+      <button class="btn btn-primary" data-action="saveNick" style="margin-top:16px">${editing?'儲存':'進入大廳'}</button>
+      ${editing?'<button class="btn btn-ghost" data-action="cancelNick" style="margin-top:10px">取消</button>':''}
     </div>
     <div class="grow"></div>
     ${micBadge()}
@@ -1272,19 +1301,29 @@ function micTestToggle(){
 }
 
 /* -------- 本機測試模式（免 Firebase，對戰電腦） -------- */
-const SAMPLE_NAMES = [
-  {name:'小明', lang:'zh-TW'}, {name:'阿華', lang:'zh-TW'}, {name:'志明', lang:'zh-TW'}, {name:'春嬌', lang:'zh-TW'},
-  {name:'美玲', lang:'zh-TW'}, {name:'家豪', lang:'zh-TW'}, {name:'淑芬', lang:'zh-TW'}, {name:'大雄', lang:'zh-TW'},
-  {name:'Kai', lang:'en-US'}, {name:'Leo', lang:'en-US'}, {name:'Mia', lang:'en-US'}, {name:'Zoe', lang:'en-US'},
-  {name:'たろう', lang:'ja-JP'}, {name:'はなこ', lang:'ja-JP'}, {name:'ゆき', lang:'ja-JP'},
-  {name:'민준', lang:'ko-KR'}, {name:'서연', lang:'ko-KR'}
-];
-// 測試 AI 預設講中文，方便實測中文比對
-const SAMPLE_ZH = ['小明','阿華','志明','春嬌','美玲','家豪','淑芬','大雄','建國','雅婷','俊傑','怡君','宗翰','佩珊'];
+// 各語言的 AI 名字池（本機測試用）
+const SAMPLE_BY_LANG = {
+  'zh-TW': ['小明','阿華','志明','春嬌','美玲','家豪','淑芬','大雄','建國','雅婷','俊傑','怡君','宗翰','佩珊'],
+  'zh-CN': ['小明','小红','伟强','丽娟','建军','秀英','志明','美玲','建华','桂英','俊杰','丽华','宗翰','佩珊'],
+  'en-US': ['Kai','Leo','Mia','Zoe','Max','Ivy','Ben','Ann','Sam','Eva','Nia','Roy','Tom','Amy'],
+  'ja-JP': ['たろう','はなこ','ゆき','けん','さくら','ひろし','あきら','みき','なお','ゆい','けんじ','あや'],
+  'ko-KR': ['민준','서연','지훈','수빈','예은','도윤','하은','시우','지민','유진','현우','채원']
+};
+function botNamePool(botLang){
+  if (botLang === 'mix'){
+    const out=[];
+    for (const [lg, names] of Object.entries(SAMPLE_BY_LANG)) for (const nm of names) out.push({name:nm, lang:lg});
+    return shuffle(out);
+  }
+  const names = SAMPLE_BY_LANG[botLang] || SAMPLE_BY_LANG['zh-TW'];
+  return shuffle(names.slice()).map(nm=>({name:nm, lang:botLang}));
+}
 function screenLocalSetup(){
   const lvls = [['practice','只練發音（電腦不搶）'],['easy','簡單（電腦很慢）'],['normal','普通'],['hard','困難（電腦很快）']];
   const games = [[2,'每人 2 場'],[3,'每人 3 場'],[4,'每人 4 場'],[0,'全部對戰']];
+  const botLangs = [['zh-TW','繁中'],['zh-CN','简中'],['en-US','English'],['ja-JP','日本語'],['ko-KR','한국어'],['mix','混合']];
   const n = S.localCount||4, gp = (S.localGamesPer===undefined?2:S.localGamesPer);
+  const bl = S.localBotLang || 'zh-TW';
   const rr = localRoundsPreview(n, gp);
   app.innerHTML = `
     ${brandHead()}
@@ -1294,10 +1333,14 @@ function screenLocalSetup(){
     </div>
     <div class="card">
       <h1 class="h1" style="margin-top:0">單機試玩</h1>
-      <p class="dim" style="margin:0 0 16px">在這一台裝置上跑完整流程：命名 → 公開 → 對決 → 結算。你對戰電腦（<b>預設都講中文</b>），換你上場時用麥克風唸出對方名字就能得分——正好實測中文語音搶答與讀音比對。</p>
+      <p class="dim" style="margin:0 0 16px">在這一台裝置上跑完整流程：命名 → 公開 → 對決 → 結算。換你上場時用麥克風唸出對方名字就能得分——用「AI 語言」可以順便測其他語言唸得通不通。</p>
       <label class="f">玩家人數（含你）</label>
       <div class="pills" style="margin-bottom:16px">
         ${[2,3,4,5,6,8].map(v=>`<button type="button" class="pill" data-action="localCount" data-n="${v}" aria-pressed="${n===v?'true':'false'}">${v} 人</button>`).join('')}
+      </div>
+      <label class="f">AI 語言（你要唸的對手名字）</label>
+      <div class="pills" style="margin-bottom:16px">
+        ${botLangs.map(([v,t])=>`<button type="button" class="pill" data-action="localBotLang" data-l="${v}" aria-pressed="${bl===v?'true':'false'}">${t}</button>`).join('')}
       </div>
       <label class="f">對戰場數（保證每個人都輪得到）</label>
       <div class="pills" style="margin-bottom:6px">
@@ -1316,13 +1359,13 @@ function screenLocalSetup(){
 }
 function startLocalGame(){
   const count = Math.max(2, Math.min(8, S.localCount||4));
-  const zh = shuffle(SAMPLE_ZH.slice());
+  const pool = botNamePool(S.localBotLang || 'zh-TW');
   const now = Date.now();
   const players = {};
   players['p0'] = { nickname: S.nickname||'你', gameName:'', gameLang:'', gameReading:'', submitted:false, score:0, joinedAt: now };
   for (let i=1;i<count;i++){
-    const nm = zh[(i-1) % zh.length];
-    players['p'+i] = { nickname:'電腦'+i, gameName:nm, gameLang:'zh-TW', gameReading: computeReading(nm,'zh-TW'), submitted:true, score:0, joinedAt: now+i };
+    const b = pool[(i-1) % pool.length];
+    players['p'+i] = { nickname:'電腦'+i, gameName:b.name, gameLang:b.lang, gameReading: computeReading(b.name, b.lang), submitted:true, score:0, joinedAt: now+i };
   }
   if (!S._realUid) S._realUid = S.uid;
   S.uid = 'p0';
@@ -1431,8 +1474,8 @@ function screenLobby(){
     </div>` : ''}
 
     <div class="card">
-      <button class="btn btn-primary" data-action="openLocal">🧪 本機測試（免 Firebase · 對戰電腦）</button>
-      <button class="btn btn-ghost" data-action="openMicTest" style="margin-top:12px">🎙 測試麥克風</button>
+      <button class="btn btn-primary" data-action="openLocal" style="text-align:center">本機測試</button>
+      <button class="btn btn-ghost" data-action="openMicTest" style="margin-top:12px">測試麥克風</button>
     </div>
 
     <div class="card">
@@ -1532,17 +1575,6 @@ function screenWaiting(){
   app.innerHTML = `
     ${brandHead()}
     <div class="card">
-      <div class="spread">
-        <div>
-          <div class="eyebrow">等待室</div>
-          <div style="font-weight:900;font-size:22px;margin-top:2px">${esc(r.name)}</div>
-          <div class="ri-sub" style="margin-top:3px">房號 <b class="num">${S.roomId}</b> · ${arr.length}/${r.maxPlayers} 人 · ${(r.gamesPer||0)>0?`每人 ${r.gamesPer} 場`:'全部對戰'}（共 <b class="num">${localRoundsPreview(arr.length||2, r.gamesPer||0)}</b> 回合）</div>
-        </div>
-        <button class="btn btn-ghost btn-sm" data-action="copyCode">分享房號</button>
-      </div>
-    </div>
-
-    <div class="card">
       <div class="eyebrow" style="margin-bottom:10px">玩家 ${arr.length}</div>
       <div class="plist">
         ${arr.map(p=>`
@@ -1555,19 +1587,33 @@ function screenWaiting(){
       </div>
     </div>
 
-    ${isHost ? hostSettingsCard(r) : `<div class="card center"><p class="dim" style="margin:6px 0">等待房主開始遊戲…</p></div>`}
+    <div class="card">
+      <div class="spread">
+        <div>
+          <div class="eyebrow">房間</div>
+          <div style="font-weight:900;font-size:20px;margin-top:2px">${esc(r.name)}</div>
+          <div class="ri-sub" style="margin-top:3px">房號 <b class="num">${S.roomId}</b> · ${arr.length}/${r.maxPlayers} 人 · ${(r.gamesPer||0)>0?`每人 ${r.gamesPer} 場`:'全部對戰'}（共 <b class="num">${localRoundsPreview(arr.length||2, r.gamesPer||0)}</b> 回合）</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" data-action="copyCode">分享房號</button>
+      </div>
+      ${isHost ? `
+        <button class="settings-toggle" data-action="toggleSettings" aria-expanded="${S.settingsOpen?'true':'false'}">
+          <span>房主設定（隨時可調）</span>
+          <span class="chev">${S.settingsOpen?'▲':'▼'}</span>
+        </button>
+        ${S.settingsOpen ? settingsBody(r) : ''}
+      ` : `<div class="dim" style="margin-top:12px">等待房主開始遊戲…</div>`}
+    </div>
 
     <div class="stack" style="margin-top:14px">
       ${isHost ? `<button class="btn btn-primary" data-action="startGame" ${canStart?'':'disabled'}>${canStart?'開始遊戲':'至少需要 2 人'}</button>`:''}
-      <button class="btn btn-ghost" data-action="openMicTest">🎙 測試麥克風</button>
       <button class="btn btn-ghost" data-action="leaveRoom">離開房間</button>
     </div>
   `;
 }
-function hostSettingsCard(r){
+function settingsBody(r){
   return `
-    <div class="card">
-      <div class="eyebrow" style="margin-bottom:12px">房主設定（隨時可調）</div>
+    <div class="settings-body">
       <div class="stack">
         <div>
           <label class="f">房間名稱</label>
@@ -1924,13 +1970,15 @@ app.addEventListener('click', e => {
   const a = t.dataset.action;
   switch(a){
     case 'saveNick': doSaveNick(); break;
-    case 'editNick': S.nickname=''; render(); break;
+    case 'editNick': S.editingNick=true; S.lastKey=null; render(); break;
+    case 'cancelNick': S.editingNick=false; S.lastKey=null; render(); break;
     case 'openMicTest': S.micTest=true; S.micTestListening=false; S.lastKey=null; render(); break;
     case 'closeMicTest': S.micTest=false; S.micTestListening=false; S.speech&&S.speech.stop(); S.lastKey=null; render(); break;
     case 'openLocal': S.localSetup=true; S.lastKey=null; render(); break;
     case 'localBack': S.localSetup=false; S.lastKey=null; render(); break;
     case 'localCount': S.localCount = parseInt(t.dataset.n)||4; S.lastKey=null; render(); break;
     case 'localGames': S.localGamesPer = parseInt(t.dataset.g); if(isNaN(S.localGamesPer)) S.localGamesPer=0; S.lastKey=null; render(); break;
+    case 'localBotLang': S.localBotLang = t.dataset.l; S.lastKey=null; render(); break;
     case 'localLevel': S.localBotLevel = t.dataset.lvl; S.lastKey=null; render(); break;
     case 'localStart': startLocalGame(); break;
     case 'localExit': localExit(); break;
@@ -1944,6 +1992,7 @@ app.addEventListener('click', e => {
       document.querySelectorAll('#s-gamesper .pill').forEach(p=>p.setAttribute('aria-pressed', p===t?'true':'false'));
       break;
     }
+    case 'toggleSettings': S.settingsOpen=!S.settingsOpen; S.lastKey=null; render(); break;
     case 'micTestLang': {
       S.micTestLang = t.dataset.lang;
       document.querySelectorAll('#mt-langs .pill').forEach(p=>p.setAttribute('aria-pressed', p.dataset.lang===S.micTestLang?'true':'false'));
@@ -1994,7 +2043,7 @@ function doSaveNick(){
   const v = ($('#nick')?.value||'').trim();
   if (!v){ toast('請輸入暱稱','err'); return; }
   S.nickname = v.slice(0,12); saveNick(S.nickname);
-  S.lastKey=null; render();
+  S.editingNick=false; S.lastKey=null; render();
 }
 function doCreateRoom(){
   const name = ($('#c-name')?.value||'').trim() || (S.nickname+' 的房間');
