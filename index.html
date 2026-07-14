@@ -519,6 +519,38 @@ const I18N = {
   chatTooBig:   ['檔案太大，壓縮後仍超過上限，換小一點的吧','文件太大，压缩后仍超过上限，换小一点的吧','Too big even after compressing — use a smaller file','圧縮後も大きすぎます','압축 후에도 너무 큼'],
   chatNoMic:    ['要錄音需要麥克風權限','要录音需要麦克风权限','Mic permission needed to record','録音にはマイク許可が必要','녹음에 마이크 권한 필요'],
   chatVoiceMsg: ['語音訊息','语音消息','Voice message','音声メッセージ','음성 메시지'],
+  // 測試麥克風
+  micTestDesc:  ['確認瀏覽器聽得到你說話。輸入一個名字，按「開始」後把它唸出來，看會不會命中；也可以留空，只單純測收不收得到聲音。','确认浏览器听得到你说话。输入一个名字，按「开始」后念出来看会不会命中；也可以留空，只测收不收得到声音。','Check the browser hears you. Type a name and say it to test a hit, or leave blank to just test audio.','ブラウザが音を拾うか確認。名前を入力し言ってみるか、空欄で音のみ確認。','브라우저가 소리를 듣는지 확인. 이름을 말해 보거나 비워두고 소리만 확인.'],
+  languageLabel:['語言','语言','Language','言語','언어'],
+  micTestNamePh:['要測試的名字（可留空）','要测试的名字（可留空）','Name to test (optional)','テストする名前（任意）','테스트할 이름(선택)'],
+  micStart:     ['開始測試','开始测试','Start test','テスト開始','테스트 시작'],
+  micStop:      ['停止','停止','Stop','停止','정지'],
+  recogResult:  ['辨識結果','识别结果','Recognition','認識結果','인식 결과'],
+  notStarted:   ['尚未開始','尚未开始','Not started','未開始','시작 안 됨'],
+  micTip:       ['按了開始卻沒反應時：1) 允許麥克風權限　2) 使用 Chrome / Edge　3) 確認網址是 https（本機用 localhost）。','按了开始却没反应时：1) 允许麦克风权限　2) 使用 Chrome / Edge　3) 确认网址是 https（本机用 localhost）。','No response? 1) Allow mic 2) Use Chrome/Edge 3) Ensure https (or localhost).','反応がない時：1)マイク許可 2)Chrome/Edge 3)https（またはlocalhost）。','반응 없으면: 1)마이크 허용 2)Chrome/Edge 3)https(또는 localhost).'],
+  readingLabel: ['讀音：','读音：','Reading: ','読み：','발음: '],
+  heardSound:   ['聽到聲音了 ✓','听到声音了 ✓','Heard you ✓','聞こえました ✓','들렸어요 ✓'],
+  hitBanner:    ['命中！這個名字沒問題，搶答時能被辨識','命中！这个名字没问题，抢答时能被识别','Hit! This name works for buzzing in','命中！この名前は認識できます','정답! 이 이름은 인식됩니다'],
+  micNoSupport: ['此瀏覽器不支援語音，請用 Chrome','此浏览器不支持语音，请用 Chrome','Voice unsupported, use Chrome','音声非対応、Chromeを','음성 미지원, Chrome을'],
+  micPermDenied:['麥克風權限被拒，請在瀏覽器允許麥克風','麦克风权限被拒，请在浏览器允许麦克风','Mic denied — allow it in the browser','マイク拒否、ブラウザで許可を','마이크 거부됨 — 브라우저에서 허용'],
+  loginFail:    ['登入失敗：','登录失败：','Login failed: ','ログイン失敗：','로그인 실패: '],
+  notConnected: ['尚未連上 Firebase，可先用本機測試','尚未连上 Firebase，可先用本机测试','Not connected to Firebase — try Local Test','Firebase未接続、ローカルテストを','Firebase 미연결 — 로컬 테스트를'],
+  roomCreated:  ['房間已建立，房號 ','房间已创建，房号 ','Room created, code ','部屋作成、番号 ','방 생성됨, 번호 '],
+  roomNotFound: ['找不到這個房號','找不到这个房号','Room not found','部屋が見つかりません','방을 찾을 수 없음'],
+  gameInProgress:['遊戲進行中，暫時無法加入','游戏进行中，暂时无法加入','Game in progress — can\'t join now','進行中で参加不可','게임 진행 중 — 참가 불가'],
+  roomFullMsg:  ['房間人數已滿','房间人数已满','Room is full','満員です','방이 가득 참'],
+  wrongPassword:['密碼錯誤','密码错误','Wrong password','パスワード違い','비밀번호 오류'],
+  roomClosedMsg:['房間已關閉','房间已关闭','Room closed','部屋が閉じました','방이 닫혔습니다'],
+  need2Start:   ['至少要 2 位玩家才能開始','至少要 2 位玩家才能开始','Need 2 players to start','開始には2人必要','시작하려면 2명 필요'],
+  micStartFail: ['無法啟動麥克風','无法启动麦克风','Couldn\'t start mic','マイク起動失敗','마이크 시작 실패'],
+  atLeastOneLang:['至少要開放一種語言','至少要开放一种语言','Enable at least one language','1言語以上を有効に','최소 한 언어 활성화'],
+  enterCode:    ['請輸入房號','请输入房号','Enter a room code','番号を入力','번호를 입력하세요'],
+  connLost:     ['連線中斷，重新連線中…','连线中断，重新连线中…','Disconnected, reconnecting…','接続が切れました、再接続中…','연결 끊김, 재연결 중…'],
+  connecting:   ['連線中…','连线中…','Connecting…','接続中…','연결 중…'],
+  enterPassword:['這個房間需要密碼：','这个房间需要密码：','This room needs a password:','この部屋はパスワードが必要：','이 방은 비밀번호가 필요:'],
+  botName:      ['電腦','电脑','CPU','CPU','CPU'],
+  roomSuffix:   [' 的房間',' 的房间','\u2019s Room','の部屋','의 방'],
+  howtoBody:    ['每人取一個 2～8 字的祕密名字。開場公開幾秒讓大家記住後蓋牌，系統兩兩配對，倒數 3・2・1 翻牌——誰先「唸出」對方名字誰得 1 分。全部對戰完，分數最高者勝（同分並列）。搶答需要麥克風，建議用電腦或 Android 的 Chrome。','每人取一个 2～8 字的秘密名字。开场公开几秒记住后盖牌，系统两两配对，倒数 3・2・1 翻牌——谁先「念出」对方名字谁得 1 分。全部对战完，分数最高者胜（同分并列）。抢答需要麦克风，建议用电脑或 Android 的 Chrome。','Each player picks a 2–8 char secret name. Names show briefly, then hide. Pairs are matched, 3-2-1, cards flip — first to SAY the opponent\'s name scores 1. Highest score wins (ties allowed). Needs a mic; Chrome on PC/Android recommended.','各自2〜8文字の秘密の名前を決めます。数秒公開後に伏せ、2人ずつ対戦、3・2・1でめくり、先に相手の名前を言えば1点。最高得点で勝ち（同点は並列）。マイクが必要、PC/AndroidのChrome推奨。','각자 2~8자 비밀 이름을 정합니다. 잠깐 공개 후 숨기고, 둘씩 짝지어 3-2-1에 뒤집어 상대 이름을 먼저 말하면 1점. 최고 점수 승(동점 허용). 마이크 필요, PC/Android Chrome 권장.'],
 };
 function T(key){
   const row = I18N[key];
@@ -693,8 +725,17 @@ function subscribeChat(roomId){
 function unsubscribeChat(){ if (S.chatUnsub){ try{S.chatUnsub();}catch{} S.chatUnsub=null; } S.chatRoomId=null; S.chatMsgs=[]; }
 function updateChatFab(){
   const show = FB_OK && S.roomId && !S.local;
-  const fab = document.getElementById('chatfab'); if (fab) fab.classList.toggle('show', !!show);
+  const fab = document.getElementById('chatfab'); if (fab){ fab.classList.toggle('show', !!show); fab.title=T('chat'); }
+  localizeChatChrome();
   if (!show) closeChat();
+}
+function localizeChatChrome(){
+  const set=(id,txt)=>{ const el=document.getElementById(id); if(el) el.textContent=txt; };
+  set('chat-title', T('chatTitle'));
+  const inp=document.getElementById('chat-text'); if(inp) inp.placeholder=T('chatPlaceholder');
+  const sb=document.querySelector('.chat-send'); if(sb) sb.textContent=T('chatSend');
+  const map={'chatPickImg':'chatImg','chatPickGif':'chatGif','chatToggleRec':'chatVoice','chatClose':'cancel'};
+  document.querySelectorAll('#chatwin [data-action]').forEach(b=>{ const k=map[b.dataset.action]; if(k) b.title=T(k); });
 }
 function openChat(){ S.chatOpen=true; S.chatUnread=0; updateUnread(); document.getElementById('chatwin')?.classList.add('show'); renderChat(); setTimeout(()=>document.getElementById('chat-text')?.focus(),50); }
 function closeChat(){ S.chatOpen=false; document.getElementById('chatwin')?.classList.remove('show'); }
@@ -949,7 +990,7 @@ class SpeechDuel {
     };
     rec.onerror = (e)=>{
       if (e && (e.error==='not-allowed' || e.error==='service-not-allowed')){
-        toast('麥克風權限被拒，請在瀏覽器允許麥克風', 'err');
+        toast(T('micPermDenied'), 'err');
         this.active=false;
       }
     };
@@ -1247,7 +1288,7 @@ if (FB_OK){
     // 本機測試時不顯示連線中斷提示
     document.getElementById('conn').classList.toggle('hidden', S.connected || S.local || S.localSetup);
   });
-  signInAnonymously(auth).catch(e => toast('登入失敗：' + e.message, 'err'));
+  signInAnonymously(auth).catch(e => toast(T('loginFail') + e.message, 'err'));
   onAuthStateChanged(auth, user => {
     if (user){
       S.uid = user.uid;
@@ -1261,7 +1302,7 @@ if (FB_OK){
   setTimeout(()=>{
     if (!S.uid){
       S.uid = 'guest-' + Math.random().toString(36).slice(2,8);
-      toast('尚未連上 Firebase，可先用本機測試', 'err');
+      toast(T('notConnected'), 'err');
       render();
     }
   }, 6000);
@@ -1296,7 +1337,7 @@ async function createRoom(cfg){
   };
   await set(ref(db, 'rooms/' + code), room);
   await enterRoom(code);
-  toast('房間已建立，房號 ' + code, 'ok');
+  toast(T('roomCreated') + code, 'ok');
 }
 function newPlayer(){
   return { nickname: S.nickname, gameName:'', gameLang:'', submitted:false, score:0, joinedAt: serverTimestamp() };
@@ -1306,15 +1347,15 @@ async function joinRoom(code){
   code = (code||'').toUpperCase().trim();
   if (!code) return;
   const snap = await get(ref(db, 'rooms/' + code));
-  if (!snap.exists()){ toast('找不到這個房號', 'err'); return; }
+  if (!snap.exists()){ toast(T('roomNotFound'), 'err'); return; }
   const room = snap.val();
-  if (room.state !== 'waiting'){ toast('遊戲進行中，暫時無法加入', 'err'); return; }
+  if (room.state !== 'waiting'){ toast(T('gameInProgress'), 'err'); return; }
   const count = room.players ? Object.keys(room.players).length : 0;
-  if (count >= room.maxPlayers){ toast('房間人數已滿', 'err'); return; }
+  if (count >= room.maxPlayers){ toast(T('roomFullMsg'), 'err'); return; }
   if (room.password){
-    const pw = prompt('這個房間需要密碼：');
+    const pw = prompt(T('enterPassword'));
     if (pw == null) return;
-    if (pw !== room.password){ toast('密碼錯誤', 'err'); return; }
+    if (pw !== room.password){ toast(T('wrongPassword'), 'err'); return; }
   }
   await set(ref(db, `rooms/${code}/players/${S.uid}`), newPlayer());
   await enterRoom(code);
@@ -1333,7 +1374,7 @@ async function enterRoom(code){
     if (!snap.exists()){
       // 房間被關閉
       cleanupRoomState();
-      toast('房間已關閉', 'err');
+      toast(T('roomClosedMsg'), 'err');
       render();
       return;
     }
@@ -1403,7 +1444,7 @@ async function saveSettings(cfg){
 async function startGame(){
   if (!S.roomId || !S.isHost || !S.room) return;
   const arr = playersArr(S.room);
-  if (arr.length < 2){ toast('至少要 2 位玩家才能開始', 'err'); return; }
+  if (arr.length < 2){ toast(T('need2Start'), 'err'); return; }
   const gameId = 'g' + serverNow();
   S.acts = new Set();
   const upd = { state:'playing', game:{ phase:'nameInput', gameId, currentRound:0 } };
@@ -1649,7 +1690,7 @@ function computeKey(){
 }
 
 function render(){
-  try { document.getElementById('conn').classList.toggle('hidden', !FB_OK || S.connected || S.local || S.localSetup); } catch {}
+  try { const c=document.getElementById('conn'); if(c) c.textContent=T('connLost'); c && c.classList.toggle('hidden', !FB_OK || S.connected || S.local || S.localSetup); } catch {}
   const key = computeKey();
   if (key !== S.lastKey){
     S.lastKey = key;
@@ -1667,7 +1708,7 @@ function render(){
 }
 
 function buildScreen(key){
-  if (key === 'boot'){ app.innerHTML = brandHead() + '<div class="card center"><p class="dim">連線中…</p></div>'; return; }
+  if (key === 'boot'){ app.innerHTML = brandHead() + `<div class="card center"><p class="dim">${T('connecting')}</p></div>`; return; }
   if (key === 'gate'){ screenGate(); return; }
   if (key === 'lang'){ screenLangPick(); return; }
   if (key === 'mic-test'){ screenMicTest(); return; }
@@ -1738,55 +1779,55 @@ function screenMicTest(){
   app.innerHTML = `
     ${brandHead()}
     <div class="spread" style="margin-bottom:12px">
-      <div class="eyebrow">開賽前檢查</div>
-      <button class="btn btn-ghost btn-sm" data-action="closeMicTest">返回</button>
+      <div class="eyebrow">${T('preCheck')}</div>
+      <button class="btn btn-ghost btn-sm" data-action="closeMicTest">${T('back')}</button>
     </div>
     <div class="card">
-      <h1 class="h1" style="margin-top:0">測試麥克風</h1>
-      <p class="dim" style="margin:0 0 14px">確認瀏覽器聽得到你說話。輸入一個名字，按「開始」後把它唸出來，看會不會命中；也可以留空，只單純測試收不收得到聲音。</p>
-      <label class="f">語言</label>
+      <h1 class="h1" style="margin-top:0">${T('micTest')}</h1>
+      <p class="dim" style="margin:0 0 14px">${T('micTestDesc')}</p>
+      <label class="f">${T('languageLabel')}</label>
       <div class="pills" id="mt-langs" style="margin-bottom:14px">
         ${allLangs.map(k=>`<button type="button" class="pill" data-action="micTestLang" data-lang="${k}" aria-pressed="${S.micTestLang===k?'true':'false'}">${LANGS[k]}</button>`).join('')}
       </div>
-      <input id="mt-name" class="inp" maxlength="40" placeholder="要測試的名字（可留空）" />
+      <input id="mt-name" class="inp" maxlength="40" placeholder="${T('micTestNamePh')}" />
       <div class="hint" id="mt-reading">　</div>
-      <button class="btn ${listening?'btn-danger':'btn-primary'}" id="mt-btn" data-action="micTestToggle" style="margin-top:14px;width:100%">${listening?'停止':'開始測試'}</button>
+      <button class="btn ${listening?'btn-danger':'btn-primary'}" id="mt-btn" data-action="micTestToggle" style="margin-top:14px;width:100%">${listening?T('micStop'):T('micStart')}</button>
     </div>
     <div class="card">
-      <div class="eyebrow" style="margin-bottom:10px">辨識結果</div>
-      <div class="mic" id="mt-mic" style="${listening?'':'opacity:.55'}"><span class="dot" id="mt-dot" style="${listening?'':'animation:none;background:var(--ink-faint)'}"></span> <span id="mt-status">${listening?'聆聽中…':'尚未開始'}</span></div>
+      <div class="eyebrow" style="margin-bottom:10px">${T('recogResult')}</div>
+      <div class="mic" id="mt-mic" style="${listening?'':'opacity:.55'}"><span class="dot" id="mt-dot" style="${listening?'':'animation:none;background:var(--ink-faint)'}"></span> <span id="mt-status">${listening?T('listening'):T('notStarted')}</span></div>
       <div class="transcript" id="mt-ts" style="margin-top:12px"></div>
       <div id="mt-result" style="margin-top:12px"></div>
     </div>
     ${micBadge()}
-    <p class="note" style="margin-top:12px">按了開始卻沒反應時：1) 允許麥克風權限　2) 使用 Chrome / Edge　3) 確認網址是 https（本機用 localhost）。</p>
+    <p class="note" style="margin-top:12px">${T('micTip')}</p>
   `;
-  const updR = ()=>{ const el=$('#mt-reading'); const nm=$('#mt-name')?.value||''; if(el){ const s=computeReading(nm, S.micTestLang); el.textContent = nm ? ('讀音：'+(s||'—')) : '　'; } };
+  const updR = ()=>{ const el=$('#mt-reading'); const nm=$('#mt-name')?.value||''; if(el){ const s=computeReading(nm, S.micTestLang); el.textContent = nm ? (T('readingLabel')+(s||'—')) : '　'; } };
   $('#mt-name')?.addEventListener('input', updR); updR();
 }
 function setMicTestUI(on){
   const btn=$('#mt-btn'), mic=$('#mt-mic'), dot=$('#mt-dot'), st=$('#mt-status');
-  if (btn){ btn.textContent = on?'停止':'開始測試'; btn.className = 'btn '+(on?'btn-danger':'btn-primary'); btn.style.width='100%'; }
+  if (btn){ btn.textContent = on?T('micStop'):T('micStart'); btn.className = 'btn '+(on?'btn-danger':'btn-primary'); btn.style.width='100%'; }
   if (mic) mic.style.opacity = on?'1':'.55';
   if (dot){ dot.style.animation = on?'':'none'; dot.style.background = on?'var(--danger)':'var(--ink-faint)'; }
-  if (st) st.textContent = on?'聆聽中…':'尚未開始';
+  if (st) st.textContent = on?T('listening'):T('notStarted');
   if (!on){ const r=$('#mt-result'); if(r) r.innerHTML=''; }
 }
 function micTestHeard(){
   const st=$('#mt-status'); const r=$('#mt-result');
-  if (st && (!r || !r.innerHTML)) st.textContent = '聽到聲音了 ✓';
+  if (st && (!r || !r.innerHTML)) st.textContent = T('heardSound');
 }
 function micTestMatch(){
   const r=$('#mt-result'); const st=$('#mt-status');
-  if (st) st.textContent = '命中！';
+  if (st) st.textContent = T('hit');
   if (r){
-    r.innerHTML = '<div class="winbanner">✅ 命中！這個名字沒問題，搶答時能被辨識</div>';
+    r.innerHTML = `<div class="winbanner">✅ ${T('hitBanner')}</div>`;
     clearTimeout(S._mtT);
-    S._mtT = setTimeout(()=>{ if($('#mt-result')) $('#mt-result').innerHTML=''; const s=$('#mt-status'); if(s&&S.micTestListening) s.textContent='聆聽中…'; }, 2500);
+    S._mtT = setTimeout(()=>{ if($('#mt-result')) $('#mt-result').innerHTML=''; const s=$('#mt-status'); if(s&&S.micTestListening) s.textContent=T('listening'); }, 2500);
   }
 }
 function micTestToggle(){
-  if (!SpeechDuel.supported()){ toast('此瀏覽器不支援語音，請用 Chrome','err'); return; }
+  if (!SpeechDuel.supported()){ toast(T('micNoSupport'),'err'); return; }
   if (!S.speech) S.speech = new SpeechDuel();
   if (S.micTestListening){
     S.speech.stop(); S.micTestListening=false; setMicTestUI(false); return;
@@ -1802,7 +1843,7 @@ function micTestToggle(){
     onMatch: ()=>{ const now=Date.now(); if(now-lastM<1200) return; lastM=now; micTestMatch(); }
   });
   if (ok){ S.micTestListening=true; setMicTestUI(true); }
-  else toast('無法啟動麥克風','err');
+  else toast(T('micStartFail'),'err');
 }
 
 /* -------- 本機測試模式（免 Firebase，對戰電腦） -------- */
@@ -1866,10 +1907,10 @@ function startLocalGame(){
   const pool = botNamePool(S.localBotLang || 'zh-TW');
   const now = Date.now();
   const players = {};
-  players['p0'] = { nickname: S.nickname||'你', gameName:'', gameLang:'', gameReading:'', submitted:false, score:0, joinedAt: now };
+  players['p0'] = { nickname: S.nickname||T('you'), gameName:'', gameLang:'', gameReading:'', submitted:false, score:0, joinedAt: now };
   for (let i=1;i<count;i++){
     const b = pool[(i-1) % pool.length];
-    players['p'+i] = { nickname:'電腦'+i, gameName:b.name, gameLang:b.lang, gameReading: computeReading(b.name, b.lang), submitted:true, score:0, joinedAt: now+i };
+    players['p'+i] = { nickname:T('botName')+i, gameName:b.name, gameLang:b.lang, gameReading: computeReading(b.name, b.lang), submitted:true, score:0, joinedAt: now+i };
   }
   if (!S._realUid) S._realUid = S.uid;
   S.uid = 'p0';
@@ -2023,7 +2064,7 @@ function screenLobby(){
 
     <details class="help">
       <summary>${T('howto')}</summary>
-      <p class="note">${T('gateDesc')}</p>
+      <p class="note">${T('howtoBody')}</p>
     </details>
   `;
   $('#joincode')?.addEventListener('keydown', e=>{ if(e.key==='Enter') doJoinCode(); });
@@ -2519,15 +2560,15 @@ app.addEventListener('click', e => {
       break;
     }
     case 'micTestToggle': micTestToggle(); break;
-    case 'gotoCreate': if(!FB_OK){ toast('線上多人需先在檔案填入 firebaseConfig','err'); break; } buildScreenForce(screenCreate); break;
+    case 'gotoCreate': if(!FB_OK){ toast(T('fbToastCreate'),'err'); break; } buildScreenForce(screenCreate); break;
     case 'backLobby': render(); break;
     case 'createRoom': doCreateRoom(); break;
-    case 'joinCode': if(!FB_OK){ toast('線上多人需先設定 Firebase','err'); break; } doJoinCode(); break;
+    case 'joinCode': if(!FB_OK){ toast(T('fbToastJoin'),'err'); break; } doJoinCode(); break;
     case 'joinRoom': {
-      if(!FB_OK){ toast('線上多人需先設定 Firebase','err'); break; }
+      if(!FB_OK){ toast(T('fbToastJoin'),'err'); break; }
       const code = t.dataset.code;
       const r = S.lobbyRooms[code];
-      if (r && r.players && Object.keys(r.players).length>=r.maxPlayers){ toast('房間人數已滿','err'); break; }
+      if (r && r.players && Object.keys(r.players).length>=r.maxPlayers){ toast(T('roomFullMsg'),'err'); break; }
       joinRoom(code); break;
     }
     case 'toggleCreateLang': {
@@ -2564,7 +2605,7 @@ function doSaveNick(){
   S.editingNick=false; S.lastKey=null; render();
 }
 function doCreateRoom(){
-  const name = ($('#c-name')?.value||'').trim() || (S.nickname+' 的房間');
+  const name = ($('#c-name')?.value||'').trim() || (S.nickname+T('roomSuffix'));
   const max = Math.max(2, Math.min(12, parseInt($('#c-max')?.value)||6));
   const timeout = Math.max(10, Math.min(60, parseInt($('#c-timeout')?.value)||30));
   const gpBtn = document.querySelector('#c-gamesper .pill[aria-pressed="true"]');
@@ -2572,12 +2613,12 @@ function doCreateRoom(){
   const pw = ($('#c-pw')?.value||'').trim();
   const langs = {}; let any=false;
   document.querySelectorAll('#c-langs .pill').forEach(p=>{ const on=p.getAttribute('aria-pressed')==='true'; langs[p.dataset.lang]=on; if(on)any=true; });
-  if (!any){ toast('至少要開放一種語言','err'); return; }
+  if (!any){ toast(T('atLeastOneLang'),'err'); return; }
   createRoom({ name, password:pw, maxPlayers:max, languages:langs, answerTimeoutSec:timeout, gamesPer });
 }
 function doJoinCode(){
   const code = ($('#joincode')?.value||'').trim();
-  if (!code){ toast('請輸入房號','err'); return; }
+  if (!code){ toast(T('enterCode'),'err'); return; }
   joinRoom(code);
 }
 function doSaveSettings(){
@@ -2589,7 +2630,7 @@ function doSaveSettings(){
   const pw = ($('#s-pw')?.value||'').trim();
   const langs = {}; let any=false;
   document.querySelectorAll('#s-langs .pill').forEach(p=>{ const on=p.getAttribute('aria-pressed')==='true'; langs[p.dataset.lang]=on; if(on)any=true; });
-  if (!any){ toast('至少要開放一種語言','err'); return; }
+  if (!any){ toast(T('atLeastOneLang'),'err'); return; }
   saveSettings({ name, password:pw, maxPlayers:max, languages:langs, answerTimeoutSec:timeout, gamesPer });
 }
 function doCopyCode(){
