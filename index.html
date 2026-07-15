@@ -233,7 +233,8 @@ details.help[open] summary::before{content:"▾ "}
 .avwrap .pav{width:52px;height:52px;border-radius:15px}
 .avwrap .edit{position:absolute;right:-4px;bottom:-4px;width:22px;height:22px;border-radius:50%;background:var(--cyan);color:#04222b;display:grid;place-items:center;font-size:12px;border:2px solid var(--bg)}
 /* 浮動聊天泡泡 + 視窗 */
-#chatfab{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;background:linear-gradient(140deg,var(--amber),var(--pink));color:#2a1400;border:none;box-shadow:0 8px 24px rgba(0,0,0,.4);cursor:pointer;z-index:60;display:none;place-items:center}
+#chatfab{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;background:linear-gradient(140deg,var(--amber),var(--pink));color:#2a1400;border:none;box-shadow:0 8px 24px rgba(0,0,0,.4);cursor:grab;z-index:60;display:none;place-items:center;touch-action:none;user-select:none}
+#chatfab.dragging{cursor:grabbing;transform:scale(1.06)}
 #chatfab.show{display:grid}
 #chatfab svg{width:26px;height:26px}
 #chatfab .unread{position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#ff4d6d;color:#fff;font:700 11px/18px var(--font-body);text-align:center;border:2px solid var(--bg)}
@@ -749,7 +750,13 @@ function localizeChatChrome(){
   const map={'chatPickImg':'chatImg','chatPickGif':'chatGif','chatToggleRec':'chatVoice','chatClose':'cancel'};
   document.querySelectorAll('#chatwin [data-action]').forEach(b=>{ const k=map[b.dataset.action]; if(k) b.title=T(k); });
 }
-function openChat(){ S.chatOpen=true; S.chatUnread=0; updateUnread(); document.getElementById('chatwin')?.classList.add('show'); renderChat(); setTimeout(()=>document.getElementById('chat-text')?.focus(),50); }
+function openChat(){
+  S.chatOpen=true; S.chatUnread=0; updateUnread();
+  document.getElementById('chatwin')?.classList.add('show');
+  positionChatWin();   // 要先 show 才量得到尺寸，才能貼著泡泡開
+  renderChat();
+  setTimeout(()=>document.getElementById('chat-text')?.focus(),50);
+}
 function closeChat(){ S.chatOpen=false; document.getElementById('chatwin')?.classList.remove('show'); }
 function updateUnread(){ const b=document.getElementById('chat-unread'); if(!b) return; const n=S.chatUnread||0; b.style.display=n>0?'':'none'; b.textContent=n>9?'9+':String(n); }
 function updateRecUI(){
@@ -815,6 +822,72 @@ async function chatStartRec(){
   } catch { toast(T('chatNoMic'),'err'); }
 }
 function chatStopRec(){ try{ S.chatRecorder && S.chatRecorder.state!=='inactive' && S.chatRecorder.stop(); }catch{} clearTimeout(S._recT); }
+/* ---- 浮動泡泡：可自由拖曳，位置會記住；聊天視窗就開在泡泡當下的位置 ---- */
+const clampN = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+function loadFabPos(){ try { const s=localStorage.getItem('nd_fabpos'); return s?JSON.parse(s):null; } catch { return null; } }
+function saveFabPos(x, y){ try { localStorage.setItem('nd_fabpos', JSON.stringify({x,y})); } catch {} }
+function setFabPos(x, y){
+  const fab=document.getElementById('chatfab'); if(!fab) return;
+  const w=fab.offsetWidth||56, h=fab.offsetHeight||56;
+  const nx=clampN(x, 4, Math.max(4, window.innerWidth-w-4));
+  const ny=clampN(y, 4, Math.max(4, window.innerHeight-h-4));
+  fab.style.right='auto'; fab.style.bottom='auto';
+  fab.style.left=nx+'px'; fab.style.top=ny+'px';
+  return {x:nx, y:ny};
+}
+function applyFabPos(){
+  const p=loadFabPos(); if(!p) return;            // 沒拖過 → 維持 CSS 預設的右下角
+  setFabPos(p.x, p.y);
+}
+/* 把聊天視窗放在泡泡旁邊：優先開在泡泡上方，放不下就開下方，並確保不會超出畫面 */
+function positionChatWin(){
+  const win=document.getElementById('chatwin'), fab=document.getElementById('chatfab');
+  if (!win || !fab) return;
+  const f=fab.getBoundingClientRect();
+  if (!f.width) return;                            // 泡泡還沒顯示就不用定位
+  const ww=win.offsetWidth || Math.min(340, window.innerWidth*0.92);
+  const wh=win.offsetHeight || Math.min(460, window.innerHeight*0.7);
+  let x = f.left + f.width/2 - ww/2;               // 水平對齊泡泡中心
+  let y = f.top - wh - 10;                         // 先試泡泡上方
+  if (y < 4) y = f.bottom + 10;                    // 上方放不下 → 改開下方
+  win.style.right='auto'; win.style.bottom='auto';
+  win.style.left = clampN(x, 4, Math.max(4, window.innerWidth-ww-4))+'px';
+  win.style.top  = clampN(y, 4, Math.max(4, window.innerHeight-wh-4))+'px';
+}
+function initFabDrag(){
+  const fab=document.getElementById('chatfab'); if(!fab) return;
+  let down=false, moved=false, sx=0, sy=0, ox=0, oy=0;
+  fab.addEventListener('pointerdown', e=>{
+    down=true; moved=false;
+    const r=fab.getBoundingClientRect(); ox=r.left; oy=r.top; sx=e.clientX; sy=e.clientY;
+    try{ fab.setPointerCapture(e.pointerId); }catch{}
+  });
+  fab.addEventListener('pointermove', e=>{
+    if(!down) return;
+    const dx=e.clientX-sx, dy=e.clientY-sy;
+    if (!moved && Math.abs(dx)<5 && Math.abs(dy)<5) return;   // 位移太小 → 視為點擊，不當拖曳
+    if (!moved){ moved=true; fab.classList.add('dragging'); }
+    setFabPos(ox+dx, oy+dy);
+    if (S.chatOpen) positionChatWin();                        // 開著的話，視窗跟著泡泡走
+  });
+  const end = ()=>{
+    if(!down) return;
+    down=false; fab.classList.remove('dragging');
+    if (moved){
+      const r=fab.getBoundingClientRect(); saveFabPos(r.left, r.top);
+    } else {
+      S.chatOpen ? closeChat() : openChat();                  // 沒拖動 → 當作點擊：開／收
+    }
+  };
+  fab.addEventListener('pointerup', end);
+  fab.addEventListener('pointercancel', end);
+  // 視窗縮放時把泡泡與聊天視窗拉回畫面內
+  window.addEventListener('resize', ()=>{
+    const fb=document.getElementById('chatfab');
+    if (fb && fb.style.left) setFabPos(parseFloat(fb.style.left)||0, parseFloat(fb.style.top)||0);
+    if (S.chatOpen) positionChatWin();
+  });
+}
 function initChatDrag(){
   const head=document.getElementById('chat-head'), win=document.getElementById('chatwin');
   if (!head||!win) return;
@@ -837,7 +910,8 @@ function initChatDrag(){
   head.addEventListener('pointercancel', ()=>{dragging=false;});
 }
 function initChat(){
-  document.getElementById('chatfab')?.addEventListener('click', ()=>{ S.chatOpen ? closeChat() : openChat(); });
+  applyFabPos();   // 還原上次拖到的位置
+  initFabDrag();   // 泡泡可自由拖曳；沒拖動則視為點擊開／收
   document.getElementById('chatwin')?.addEventListener('click', e=>{
     const b=e.target.closest('[data-action]'); if(!b) return;
     const a=b.dataset.action;
