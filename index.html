@@ -31,6 +31,8 @@ body{
   -webkit-font-smoothing:antialiased;
 }
 #app{max-width:520px;margin:0 auto;padding:20px 16px 40px;min-height:100dvh;display:flex;flex-direction:column}
+/* 電腦版加寬（手機維持 520px 的單欄手感） */
+@media(min-width:900px){ #app{max-width:860px;padding:24px 28px 48px} }
 button{font-family:inherit;cursor:pointer;border:none;color:inherit}
 input{font-family:inherit}
 .hidden{display:none !important}
@@ -389,7 +391,8 @@ const I18N = {
   gamesLabel:   ['對戰場數','对战场数','Matches each','対戦数','대전 수'],
   password:     ['密碼（可留空）','密码（可留空）','Password (optional)','パスワード（任意）','비밀번호(선택)'],
   noPassword:   ['不設密碼','不设密码','No password','パスワードなし','비밀번호 없음'],
-  langsLabel:   ['開放的名字語言','开放的名字语言','Allowed name languages','使える名前の言語','이름 언어'],
+  langsLabel:   ['名字語言（房主決定，全房統一）','名字语言（房主决定，全房统一）','Name language (host decides, room-wide)','名前の言語（ホストが決定）','이름 언어(방장이 결정)'],
+  langByHost:   ['由房主指定，全房統一使用這個語言','由房主指定，全房统一使用这个语言','Set by the host — everyone uses this language','ホスト指定・全員この言語','방장 지정 — 모두 이 언어 사용'],
   gPer2:        ['每人 2 場','每人 2 场','2 each','1人2戦','1인 2회'],
   gPer3:        ['每人 3 場','每人 3 场','3 each','1人3戦','1인 3회'],
   gPer4:        ['每人 4 場','每人 4 场','4 each','1人4戦','1인 4회'],
@@ -418,7 +421,7 @@ const I18N = {
   nameDesc:     ['等一下這個名字會公開幾秒讓大家記住，之後對戰時，對手要搶先唸出它。取個好唸又好記的吧！','等一下这个名字会公开几秒让大家记住，之后对战时，对手要抢先念出它。取个好念又好记的吧！','It\'ll be shown briefly for everyone to memorize; opponents race to say it. Make it easy to pronounce!','数秒間公開され、対戦で相手が先に言います。言いやすい名前を！','잠시 공개되어 상대가 먼저 말합니다. 발음하기 쉽게!'],
   nameLangLabel:['名字的語言','名字的语言','Name language','名前の言語','이름 언어'],
   namePlaceholder:['輸入 2～8 字的名字','输入 2～8 字的名字','Enter a 2–8 char name','2〜8文字の名前','2~8자 이름 입력'],
-  nameHint:     ['辨識語言＝你選的語系','识别语言＝你选的语系','Recognition uses your chosen language','認識言語＝選んだ言語','인식 언어＝선택한 언어'],
+  nameHint:     ['建議 3～5 字，好唸又好記','建议 3～5 字，好念又好记','3–5 chars works best — easy to say','3〜5文字が言いやすい','3~5자가 말하기 좋아요'],
   customReading:['自訂發音（進階，通常免填）','自订发音（进阶，通常免填）','Custom pronunciation (advanced)','発音カスタム（上級）','발음 지정(고급)'],
   customReadingHint:['留空＝系統自動判讀讀音（唸對音就算對，同音字、平翹舌／前後鼻音都互通）。想更保險可自填發音：繁中用注音（例：ㄕㄨㄣ ㄈㄥ）、其他語言用羅馬拼音或假名。','留空＝系统自动判读读音。想更保险可自填发音：繁中用注音，其他语言用罗马拼音或假名。','Leave blank for auto phonetics. Optionally type the pronunciation.','空欄で自動判定。任意で発音を入力可。','비우면 자동 발음. 필요시 발음 입력.'],
   submitName:   ['送出名字','送出名字','Submit name','名前を送信','이름 제출'],
@@ -591,7 +594,7 @@ const S = {
   isHost: false,
   connected: true,
   selectedLang: null,  // 命名時選的語系
-  createLangs: {'zh-TW':true,'zh-CN':true,'en-US':true,'ja-JP':true,'ko-KR':true},
+  createLang: 'zh-TW',  // 建立房間：房主指定的名字語言（全房統一）
   speech: null,
   claimedRound: -1,    // 本回合是否已喊出
   micTest: false,      // 測試麥克風畫面
@@ -608,6 +611,7 @@ const S = {
   micReady: false,
   editingNick: false,  // 正在修改暱稱
   settingsOpen: false, // 房主設定是否展開
+  showScores: false,   // 對決中分數面板是否常駐顯示
   acts: new Set(),     // 房主動作鎖（依 gameId 命名，避免重複寫入）
   lastKey: null,
   roomUnsub: null,
@@ -623,6 +627,13 @@ function serverNow(){ return Date.now() + S.serverOffset; }
 const $ = (sel, root=document) => root.querySelector(sel);
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function avatarChar(name){ const a = [...String(name||'')]; return a.length ? a[0] : '?'; }
+/* 房間的名字語言（房主指定，全房統一）。相容舊資料：沒有 lang 就取 languages 裡第一個開啟的 */
+function roomLang(r){
+  if (!r) return 'zh-TW';
+  if (r.lang && LANGS[r.lang]) return r.lang;
+  const on = Object.keys(LANGS).filter(k => r.languages && r.languages[k]);
+  return on[0] || 'zh-TW';
+}
 
 /* ---------------- 頭像系統（壓縮成小圖，存 localStorage 與 RTDB avatars/$uid）---------------- */
 const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -1668,7 +1679,9 @@ const app = document.getElementById('app');
 function routeGame(r){
   if (r.state === 'waiting') return 'wait';
   const g = r.game || {};
-  if (g.phase === 'nameInput') return 'g-name';
+  // 自己的送出狀態放進 key：送出後才會從輸入表單切成「已送出」畫面。
+  // 其他人的完成數不放進 key，改用 patch 更新，才不會把你正在打的名字清掉。
+  if (g.phase === 'nameInput') return 'g-name:' + ((r.players&&r.players[S.uid]&&r.players[S.uid].submitted)?1:0);
   if (g.phase === 'reveal') return 'g-reveal';
   if (g.phase === 'prep') return 'g-prep';
   if (g.phase === 'results') return 'g-result';
@@ -1715,7 +1728,7 @@ function buildScreen(key){
   if (key === 'local-setup'){ screenLocalSetup(); return; }
   if (key === 'lobby'){ subscribeLobby(); screenLobby(); return; }
   if (key === 'wait'){ screenWaiting(); return; }
-  if (key === 'g-name'){ screenNameInput(); return; }
+  if (key.startsWith('g-name')){ screenNameInput(); return; }
   if (key === 'g-reveal'){ screenReveal(); return; }
   if (key === 'g-prep'){ screenPrep(); return; }
   if (key.startsWith('g-duel')){ screenDuel(); return; }
@@ -1874,7 +1887,7 @@ function screenLocalSetup(){
   app.innerHTML = `
     ${brandHead()}
     <div class="spread" style="margin-bottom:12px">
-      <div class="eyebrow">${T('localSub')}</div>
+      <div></div>
       <button class="btn btn-ghost btn-sm" data-action="localBack">${T('back')}</button>
     </div>
     <div class="card">
@@ -1899,7 +1912,6 @@ function screenLocalSetup(){
       </div>
       <button class="btn btn-primary" data-action="localStart" style="margin-top:12px">${T('startPlay')}</button>
     </div>
-    ${micBadge()}
   `;
 }
 function startLocalGame(){
@@ -1916,9 +1928,10 @@ function startLocalGame(){
   S.uid = 'p0';
   S.local = true; S.localSetup = false;
   S.claimedRound = -1; S.lastKey = null;
+  const myLang = (S.localBotLang && S.localBotLang!=='mix') ? S.localBotLang : 'zh-TW';
   S.room = {
     name:'本機測試', maxPlayers:count, hostId:'p0', state:'playing',
-    languages:{'zh-TW':true,'zh-CN':true,'en-US':true,'ja-JP':true,'ko-KR':true},
+    lang: myLang, languages:{[myLang]:true},
     answerTimeoutSec:30, gamesPer:(S.localGamesPer===undefined?2:S.localGamesPer), players,
     game:{ phase:'nameInput', gameId:'local'+now, currentRound:0 }
   };
@@ -1999,10 +2012,32 @@ function localTick(){
 }
 
 /* -------- 大廳 -------- */
-function screenLobby(){
-  const rooms = Object.entries(S.lobbyRooms||{})
+/* 大廳房間列表（build 與 patch 共用，資料一變就能局部更新，不會清掉正在輸入的房號） */
+function lobbyRoomsArr(){
+  return Object.entries(S.lobbyRooms||{})
     .filter(([_,r]) => r.state==='waiting' && r.players && Object.keys(r.players).length>0)
     .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0));
+}
+function roomListHtml(rooms){
+  if (!rooms.length) return `<div class="empty">${T('noRooms')}<br>${T('noRoomsSub')}</div>`;
+  return rooms.map(([code,r])=>{
+    const count = Object.keys(r.players).length;
+    return `<div class="roomitem" data-action="joinRoom" data-code="${code}">
+      <div class="ri-main">
+        <div class="ri-name">${r.password?'<span class="tag-lock">🔒</span>':''}${esc(r.name)}</div>
+        <div class="ri-sub">${T('roomCode')} ${code} · ${count}/${r.maxPlayers}</div>
+      </div>
+      <span class="badge ${count>=r.maxPlayers?'wait':'you'}">${count>=r.maxPlayers?T('roomFull'):T('join')}</span>
+    </div>`;
+  }).join('');
+}
+function patchLobby(){
+  const rooms = lobbyRoomsArr();
+  const list = $('#lobby-rooms'); if (list) list.innerHTML = roomListHtml(rooms);
+  const cnt = $('#lobby-count'); if (cnt) cnt.textContent = `${rooms.length} ${T('roomsUnit')}`;
+}
+function screenLobby(){
+  const rooms = lobbyRoomsArr();
 
   app.innerHTML = `
     ${brandHead()}
@@ -2044,20 +2079,9 @@ function screenLobby(){
     ${FB_OK ? `<div class="card">
       <div class="spread" style="margin-bottom:12px">
         <div class="eyebrow">${T('openRooms')}</div>
-        <span class="faint num" style="font-size:12px">${rooms.length} ${T('roomsUnit')}</span>
+        <span class="faint num" style="font-size:12px" id="lobby-count">${rooms.length} ${T('roomsUnit')}</span>
       </div>
-      <div class="roomlist">
-        ${rooms.length ? rooms.map(([code,r])=>{
-          const count = Object.keys(r.players).length;
-          return `<div class="roomitem" data-action="joinRoom" data-code="${code}">
-            <div class="ri-main">
-              <div class="ri-name">${r.password?'<span class="tag-lock">🔒</span>':''}${esc(r.name)}</div>
-              <div class="ri-sub">${T('roomCode')} ${code} · ${count}/${r.maxPlayers}</div>
-            </div>
-            <span class="badge ${count>=r.maxPlayers?'wait':'you'}">${count>=r.maxPlayers?T('roomFull'):T('join')}</span>
-          </div>`;
-        }).join('') : `<div class="empty">${T('noRooms')}<br>${T('noRoomsSub')}</div>`}
-      </div>
+      <div class="roomlist" id="lobby-rooms">${roomListHtml(rooms)}</div>
     </div>` : ''}
 
     ${micBadge()}
@@ -2107,8 +2131,9 @@ function screenCreate(){
         <div>
           <label class="f">${T('langsLabel')}</label>
           <div class="pills" id="c-langs">
-            ${Object.entries(LANGS).map(([k,v])=>`<button type="button" class="pill" data-action="toggleCreateLang" data-lang="${k}" aria-pressed="${S.createLangs[k]?'true':'false'}">${v}</button>`).join('')}
+            ${Object.entries(LANGS).map(([k,v])=>`<button type="button" class="pill" data-action="pickCreateLang" data-lang="${k}" aria-pressed="${S.createLang===k?'true':'false'}">${v}</button>`).join('')}
           </div>
+          <div class="hint">${T('langByHost')}</div>
         </div>
       </div>
       <div class="row" style="margin-top:18px">
@@ -2129,24 +2154,16 @@ function screenWaiting(){
   app.innerHTML = `
     ${brandHead()}
     <div class="card">
-      <div class="eyebrow" style="margin-bottom:10px">${T('players')} ${arr.length}</div>
-      <div class="plist">
-        ${arr.map(p=>`
-          <div class="pchip">
-            ${avatarImg(p.id)}
-            <div class="pn">${esc(p.nickname)}</div>
-            ${p.id===r.hostId?`<span class="badge host">${T('host')}</span>`:''}
-            ${p.id===S.uid?`<span class="badge you">${T('you')}</span>`:''}
-          </div>`).join('')}
-      </div>
+      <div class="eyebrow" style="margin-bottom:10px" id="w-count">${T('players')} ${arr.length}</div>
+      <div class="plist" id="w-plist">${plistHtml(r)}</div>
     </div>
 
     <div class="card">
       <div class="spread">
         <div>
           <div class="eyebrow">${T('room')}</div>
-          <div style="font-weight:900;font-size:20px;margin-top:2px">${esc(r.name)}</div>
-          <div class="ri-sub" style="margin-top:3px">${T('roomCode')} <b class="num">${S.roomId}</b> · ${arr.length}/${r.maxPlayers} · ${(r.gamesPer||0)>0?`${T('perRounds')} ${r.gamesPer}`:T('gPerAll')}（${localRoundsPreview(arr.length||2, r.gamesPer||0)} ${T('totalRounds')}）</div>
+          <div style="font-weight:900;font-size:20px;margin-top:2px" id="w-name">${esc(r.name)}</div>
+          <div class="ri-sub" style="margin-top:3px" id="w-info">${roomInfoHtml(r, arr)}</div>
         </div>
         <button class="btn btn-ghost btn-sm" data-action="copyCode">${T('shareCode')}</button>
       </div>
@@ -2160,10 +2177,24 @@ function screenWaiting(){
     </div>
 
     <div class="stack" style="margin-top:14px">
-      ${isHost ? `<button class="btn btn-primary" data-action="startGame" ${canStart?'':'disabled'}>${canStart?T('startGame'):T('need2')}</button>`:''}
+      ${isHost ? `<button class="btn btn-primary" id="w-start" data-action="startGame" ${canStart?'':'disabled'}>${canStart?T('startGame'):T('need2')}</button>`:''}
       <button class="btn btn-ghost" data-action="leaveRoom">${T('leaveRoom')}</button>
     </div>
   `;
+}
+/* 玩家清單／房間資訊：build 與 patch 共用 */
+function plistHtml(r){
+  const arr = playersArr(r).sort((a,b)=>(a.joinedAt||0)-(b.joinedAt||0));
+  return arr.map(p=>`
+    <div class="pchip">
+      ${avatarImg(p.id)}
+      <div class="pn">${esc(p.nickname)}</div>
+      ${p.id===r.hostId?`<span class="badge host">${T('host')}</span>`:''}
+      ${p.id===S.uid?`<span class="badge you">${T('you')}</span>`:''}
+    </div>`).join('');
+}
+function roomInfoHtml(r, arr){
+  return `${T('roomCode')} <b class="num">${S.roomId}</b> · ${arr.length}/${r.maxPlayers} · ${(r.gamesPer||0)>0?`${T('perRounds')} ${r.gamesPer}`:T('gPerAll')}（${localRoundsPreview(arr.length||2, r.gamesPer||0)} ${T('totalRounds')}）`;
 }
 function settingsBody(r){
   const gp=[[2,T('gPer2')],[3,T('gPer3')],[4,T('gPer4')],[0,T('gPerAll')]];
@@ -2198,8 +2229,9 @@ function settingsBody(r){
         <div>
           <label class="f">${T('langsLabel')}</label>
           <div class="pills" id="s-langs">
-            ${Object.entries(LANGS).map(([k,v])=>`<button type="button" class="pill" data-action="toggleSettingLang" data-lang="${k}" aria-pressed="${r.languages&&r.languages[k]?'true':'false'}">${v}</button>`).join('')}
+            ${Object.entries(LANGS).map(([k,v])=>`<button type="button" class="pill" data-action="pickSettingLang" data-lang="${k}" aria-pressed="${roomLang(r)===k?'true':'false'}">${v}</button>`).join('')}
           </div>
+          <div class="hint">${T('langByHost')}</div>
         </div>
         <button class="btn btn-cyan" data-action="saveSettings">${T('saveSettings')}</button>
       </div>
@@ -2210,8 +2242,8 @@ function settingsBody(r){
 function screenNameInput(){
   const r = S.room;
   const me = r.players[S.uid];
-  const langs = Object.entries(r.languages||{}).filter(([_,v])=>v).map(([k])=>k);
-  if (!S.selectedLang || !langs.includes(S.selectedLang)) S.selectedLang = langs[0] || 'zh-TW';
+  // 語言由房主指定，全房統一（玩家不能自選，避免各講各的）
+  S.selectedLang = roomLang(r);
   const arr = playersArr(r);
   const doneCount = arr.filter(p=>p.submitted).length;
 
@@ -2229,7 +2261,7 @@ function screenNameInput(){
         <p class="dim">${T('waitOthers')}</p>
         <div class="progress" style="margin-top:14px">
           <div class="pbar"><i id="np-bar" style="width:${Math.round(doneCount/arr.length*100)}%"></i></div>
-          <span class="roundlbl num" id="np-txt">${doneCount}/${arr.length}</span>
+          <span class="roundlbl num" id="np-txt">${doneCount}/${arr.length} ${T('done')}</span>
         </div>
       </div>
       <div class="grow"></div>
@@ -2244,11 +2276,12 @@ function screenNameInput(){
       <h1 class="h1">${T('pickSecret')}</h1>
       <p class="dim" style="margin:0 0 16px">${T('nameDesc')}</p>
       <label class="f">${T('nameLangLabel')}</label>
-      <div class="pills" id="n-langs" style="margin-bottom:14px">
-        ${langs.map(k=>`<button type="button" class="pill" data-action="pickLang" data-lang="${k}" aria-pressed="${S.selectedLang===k?'true':'false'}">${LANGS[k]}</button>`).join('')}
+      <div class="pills" id="n-langs" style="margin-bottom:6px">
+        <button type="button" class="pill" aria-pressed="true" disabled style="cursor:default">${LANGS[S.selectedLang]||''}</button>
       </div>
+      <div class="hint" style="margin-bottom:14px">${T('langByHost')}</div>
       <input id="gname" class="inp" maxlength="${NAME_MAX}" placeholder="${T('namePlaceholder')}" />
-      <div class="hint">${T('nameHint')}（<span id="lang-hint">${LANGS[S.selectedLang]||''}</span>）</div>
+      <div class="hint">${T('nameHint')}</div>
       <details class="help" style="margin-top:10px">
         <summary>${T('customReading')}</summary>
         <div style="padding:4px 2px 2px">
@@ -2258,8 +2291,8 @@ function screenNameInput(){
       </details>
       <button class="btn btn-primary" data-action="submitName" style="margin-top:16px">${T('submitName')}</button>
       <div class="progress" style="margin-top:16px">
-        <div class="pbar"><i style="width:${Math.round(doneCount/arr.length*100)}%"></i></div>
-        <span class="roundlbl num">${doneCount}/${arr.length} ${T('done')}</span>
+        <div class="pbar"><i id="np-bar" style="width:${Math.round(doneCount/arr.length*100)}%"></i></div>
+        <span class="roundlbl num" id="np-txt">${doneCount}/${arr.length} ${T('done')}</span>
       </div>
       ${S.local ? `<button class="btn btn-ghost" data-action="localExit" style="margin-top:12px">${T('exitTest')}</button>` : ''}
     </div>
@@ -2349,12 +2382,6 @@ function screenDuel(){
       ${!revealed ? `<div class="duelcount"><span id="dc-num">3</span></div>` : ''}
     </div>`;
 
-  // 迷你名單（全員蓋牌，兩位登場者亮起）
-  const mini = arr.map(p=>{
-    const cls = p.id===m.a?'a':(p.id===m.b?'b':'');
-    return `<div class="mini ${cls}">?</div>`;
-  }).join('');
-
   let panel = '';
   if (m.winner){
     if (m.winner==='none'){
@@ -2394,10 +2421,9 @@ function screenDuel(){
     </div>
     <div class="card" style="padding:16px">
       ${stageHtml}
-      <div class="miniroster">${mini}</div>
       ${panel}
     </div>
-    <div id="scorepanel" class="card hidden">${scoreListHtml(arr, r.hostId)}</div>
+    <div id="scorepanel" class="card ${S.showScores?'':'hidden'}">${scoreListHtml(arr, r.hostId)}</div>
   `;
 
   // 翻牌後啟動語音（只有對戰雙方）
@@ -2477,14 +2503,27 @@ function screenResult(){
    局部更新（計時器等，不重建畫面以免動畫/麥克風中斷）
    ========================================================= */
 function patchScreen(key){
+  // 大廳：房間列表即時更新（不重建畫面，才不會清掉正在輸入的房號）
+  if (key === 'lobby'){ patchLobby(); return; }
   const r = S.room; if (!r) return;
   const g = r.game;
-  if (key === 'g-name'){
+  // 等待室：玩家進出、房間資訊即時更新（不重建，才不會清掉房主正在填的設定）
+  if (key === 'wait'){
+    const arr = playersArr(r);
+    const pl = $('#w-plist'); if (pl) pl.innerHTML = plistHtml(r);
+    const cnt = $('#w-count'); if (cnt) cnt.textContent = `${T('players')} ${arr.length}`;
+    const nm = $('#w-name'); if (nm) nm.textContent = r.name;
+    const info = $('#w-info'); if (info) info.innerHTML = roomInfoHtml(r, arr);
+    const sb = $('#w-start');
+    if (sb){ const can = arr.length>=2; sb.disabled=!can; sb.textContent = can?T('startGame'):T('need2'); }
+    return;
+  }
+  if (key.startsWith('g-name')){
     const arr = playersArr(r);
     const done = arr.filter(p=>p.submitted).length;
     const bar = $('#np-bar'), txt = $('#np-txt');
     if (bar) bar.style.width = Math.round(done/arr.length*100)+'%';
-    if (txt) txt.textContent = `${done}/${arr.length}`;
+    if (txt) txt.textContent = `${done}/${arr.length} ${T('done')}`;
   }
   else if (key === 'g-reveal' && g){
     const remain = Math.max(0, (g.revealEndAt||0) - serverNow());
@@ -2571,27 +2610,25 @@ app.addEventListener('click', e => {
       if (r && r.players && Object.keys(r.players).length>=r.maxPlayers){ toast(T('roomFullMsg'),'err'); break; }
       joinRoom(code); break;
     }
-    case 'toggleCreateLang': {
-      const k = t.dataset.lang; S.createLangs[k] = !S.createLangs[k];
-      t.setAttribute('aria-pressed', S.createLangs[k]?'true':'false'); break;
+    case 'pickCreateLang': {
+      S.createLang = t.dataset.lang;
+      document.querySelectorAll('#c-langs .pill').forEach(p=>p.setAttribute('aria-pressed', p.dataset.lang===S.createLang?'true':'false'));
+      break;
     }
-    case 'toggleSettingLang': {
-      const cur = t.getAttribute('aria-pressed')==='true';
-      t.setAttribute('aria-pressed', cur?'false':'true'); break;
+    case 'pickSettingLang': {
+      document.querySelectorAll('#s-langs .pill').forEach(p=>p.setAttribute('aria-pressed', p===t?'true':'false'));
+      break;
     }
     case 'saveSettings': doSaveSettings(); break;
     case 'copyCode': case 'shareCode': doCopyCode(); break;
     case 'startGame': startGame(); break;
     case 'leaveRoom': leaveRoom(); break;
-    case 'pickLang': {
-      S.selectedLang = t.dataset.lang;
-      document.querySelectorAll('#n-langs .pill').forEach(p=>p.setAttribute('aria-pressed', p.dataset.lang===S.selectedLang?'true':'false'));
-      const lh = $('#lang-hint'); if (lh) lh.textContent = LANGS[S.selectedLang]||'';
-      updateReadingPlaceholder();
-      break;
-    }
     case 'submitName': doSubmitName(); break;
-    case 'toggleScores': $('#scorepanel')?.classList.toggle('hidden'); break;
+    // 記在狀態裡：下一回合重建畫面時仍保持顯示，直到再按一次才隱藏
+    case 'toggleScores':
+      S.showScores = !S.showScores;
+      $('#scorepanel')?.classList.toggle('hidden', !S.showScores);
+      break;
     case 'resetWaiting': resetToWaiting(); break;
   }
 });
@@ -2611,10 +2648,9 @@ function doCreateRoom(){
   const gpBtn = document.querySelector('#c-gamesper .pill[aria-pressed="true"]');
   const gamesPer = gpBtn ? (parseInt(gpBtn.dataset.g)||0) : (S.createGamesPer||0);
   const pw = ($('#c-pw')?.value||'').trim();
-  const langs = {}; let any=false;
-  document.querySelectorAll('#c-langs .pill').forEach(p=>{ const on=p.getAttribute('aria-pressed')==='true'; langs[p.dataset.lang]=on; if(on)any=true; });
-  if (!any){ toast(T('atLeastOneLang'),'err'); return; }
-  createRoom({ name, password:pw, maxPlayers:max, languages:langs, answerTimeoutSec:timeout, gamesPer });
+  const lgBtn = document.querySelector('#c-langs .pill[aria-pressed="true"]');
+  const lang = (lgBtn && lgBtn.dataset.lang) || S.createLang || 'zh-TW';
+  createRoom({ name, password:pw, maxPlayers:max, lang, languages:{[lang]:true}, answerTimeoutSec:timeout, gamesPer });
 }
 function doJoinCode(){
   const code = ($('#joincode')?.value||'').trim();
@@ -2628,15 +2664,14 @@ function doSaveSettings(){
   const gpBtn = document.querySelector('#s-gamesper .pill[aria-pressed="true"]');
   const gamesPer = gpBtn ? (parseInt(gpBtn.dataset.g)||0) : (S.room.gamesPer||0);
   const pw = ($('#s-pw')?.value||'').trim();
-  const langs = {}; let any=false;
-  document.querySelectorAll('#s-langs .pill').forEach(p=>{ const on=p.getAttribute('aria-pressed')==='true'; langs[p.dataset.lang]=on; if(on)any=true; });
-  if (!any){ toast(T('atLeastOneLang'),'err'); return; }
-  saveSettings({ name, password:pw, maxPlayers:max, languages:langs, answerTimeoutSec:timeout, gamesPer });
+  const lgBtn = document.querySelector('#s-langs .pill[aria-pressed="true"]');
+  const lang = (lgBtn && lgBtn.dataset.lang) || roomLang(S.room);
+  saveSettings({ name, password:pw, maxPlayers:max, lang, languages:{[lang]:true}, answerTimeoutSec:timeout, gamesPer });
 }
 function doCopyCode(){
   const code = S.roomId; if(!code) return;
-  const txt = `${T('brand')} — ${T('roomCode')}: ${code}`;
-  if (navigator.clipboard){ navigator.clipboard.writeText(txt).then(()=>toast(T('toasts_copied')+' '+code,'ok')).catch(()=>toast(T('roomCode')+': '+code)); }
+  // 只複製房號本身，貼上就能直接加入
+  if (navigator.clipboard){ navigator.clipboard.writeText(code).then(()=>toast(T('toasts_copied')+' '+code,'ok')).catch(()=>toast(T('roomCode')+': '+code)); }
   else toast(T('roomCode')+': '+code);
 }
 function doSubmitName(){
