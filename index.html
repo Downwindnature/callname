@@ -612,6 +612,7 @@ const S = {
   editingNick: false,  // 正在修改暱稱
   settingsOpen: false, // 房主設定是否展開
   showScores: false,   // 對決中分數面板是否常駐顯示
+  howtoOpen: false,    // 大廳「怎麼玩」是否展開
   acts: new Set(),     // 房主動作鎖（依 gameId 命名，避免重複寫入）
   lastKey: null,
   roomUnsub: null,
@@ -836,7 +837,7 @@ function initChatDrag(){
   head.addEventListener('pointercancel', ()=>{dragging=false;});
 }
 function initChat(){
-  document.getElementById('chatfab')?.addEventListener('click', openChat);
+  document.getElementById('chatfab')?.addEventListener('click', ()=>{ S.chatOpen ? closeChat() : openChat(); });
   document.getElementById('chatwin')?.addEventListener('click', e=>{
     const b=e.target.closest('[data-action]'); if(!b) return;
     const a=b.dataset.action;
@@ -1778,9 +1779,10 @@ function screenGate(){
   $('#nick')?.addEventListener('keydown', e=>{ if(e.key==='Enter') doSaveNick(); });
 }
 function micBadge(){
-  const ok = SpeechDuel.supported();
+  // 支援語音時不顯示（不佔版面）；只有「不支援」才提醒，這種情況玩家一定要知道
+  if (SpeechDuel.supported()) return '';
   return `<div class="center" style="margin-top:14px">
-    <span class="badge-mic ${ok?'ok':'no'}">${ok?T('micOk'):T('micNo')}</span>
+    <span class="badge-mic no">${T('micNo')}</span>
   </div>`;
 }
 
@@ -2050,11 +2052,13 @@ function screenLobby(){
           </div>
           <div><div class="eyebrow">${T('welcome')}</div><div style="font-weight:800;font-size:19px;margin-top:2px">${esc(S.nickname)}</div></div>
         </div>
-        <div class="row" style="width:auto;gap:8px">
+        <div class="row wrap" style="width:auto;gap:8px;justify-content:flex-end">
           <button class="btn btn-ghost btn-sm" data-action="openLang">🌐 ${langName()}</button>
           <button class="btn btn-ghost btn-sm" data-action="editNick">${T('editNick')}</button>
+          <button class="btn btn-ghost btn-sm" data-action="toggleHowto" aria-expanded="${S.howtoOpen?'true':'false'}">${T('howto')}</button>
         </div>
       </div>
+      <div id="howto-panel" class="settings-body ${S.howtoOpen?'':'hidden'}"><p class="note" style="margin:0">${T('howtoBody')}</p></div>
     </div>
 
     ${!FB_OK ? `<div class="card" style="border-color:rgba(255,179,64,.45);background:rgba(255,179,64,.06)">
@@ -2085,11 +2089,6 @@ function screenLobby(){
     </div>` : ''}
 
     ${micBadge()}
-
-    <details class="help">
-      <summary>${T('howto')}</summary>
-      <p class="note">${T('howtoBody')}</p>
-    </details>
   `;
   $('#joincode')?.addEventListener('keydown', e=>{ if(e.key==='Enter') doJoinCode(); });
 }
@@ -2567,6 +2566,12 @@ app.addEventListener('click', e => {
     case 'editNick': S.editingNick=true; S.lastKey=null; render(); break;
     case 'cancelNick': S.editingNick=false; S.lastKey=null; render(); break;
     case 'openLang': S.langPick=true; S.lastKey=null; render(); break;
+    // 直接切 class，不重建畫面（才不會清掉你正在輸入的房號）
+    case 'toggleHowto':
+      S.howtoOpen = !S.howtoOpen;
+      $('#howto-panel')?.classList.toggle('hidden', !S.howtoOpen);
+      t.setAttribute('aria-expanded', S.howtoOpen?'true':'false');
+      break;
     case 'pickAvatar': document.getElementById('avatar-file')?.click(); break;
     case 'langBack': S.langPick=false; S.lastKey=null; render(); break;
     case 'pickUiLang': S.uiLang=t.dataset.l; saveUiLang(S.uiLang); S.langPick=false; S.lastKey=null; render(); break;
