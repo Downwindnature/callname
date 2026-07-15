@@ -238,7 +238,7 @@ details.help[open] summary::before{content:"▾ "}
 #chatfab.show{display:grid}
 #chatfab svg{width:26px;height:26px}
 #chatfab .unread{position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#ff4d6d;color:#fff;font:700 11px/18px var(--font-body);text-align:center;border:2px solid var(--bg)}
-#chatwin{position:fixed;right:18px;bottom:84px;width:min(340px,92vw);height:min(460px,70vh);background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 50px rgba(0,0,0,.5);z-index:61;display:none;flex-direction:column;overflow:hidden}
+#chatwin{position:fixed;right:18px;bottom:84px;width:min(340px,92vw);height:min(460px,70vh);background:#241348;border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 50px rgba(0,0,0,.5);z-index:61;display:none;flex-direction:column;overflow:hidden}
 #chatwin.show{display:flex}
 .chat-head{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;background:rgba(255,255,255,.05);border-bottom:1px solid var(--line);cursor:move;user-select:none;touch-action:none}
 .chat-head .ttl{font:800 14px/1 var(--font-body)}
@@ -260,6 +260,16 @@ details.help[open] summary::before{content:"▾ "}
 .chat-tool.rec{color:#ff4d6d}
 .chat-send{background:var(--cyan);color:#04222b;border:none;border-radius:10px;padding:9px 13px;font-weight:800;cursor:pointer;flex:0 0 auto}
 .rec-bar{padding:8px 12px;background:rgba(255,77,109,.12);color:#ff8095;font-size:13px;text-align:center;border-top:1px solid var(--line);cursor:pointer}
+/* 音訊設定面板 */
+.modal{position:fixed;inset:0;background:rgba(8,4,20,.72);backdrop-filter:blur(4px);z-index:70;display:grid;place-items:center;padding:20px}
+.modal-card{background:#241348;border:1px solid var(--line);border-radius:var(--radius);padding:22px;width:min(460px,94vw);box-shadow:0 24px 70px rgba(0,0,0,.6)}
+.modal-title{font:900 19px/1 var(--font-body);margin-bottom:20px;display:flex;align-items:center;gap:9px}
+.au-row{display:flex;align-items:center;gap:12px;margin-bottom:15px}
+.au-row .au-lbl{width:58px;flex:0 0 auto;font-size:14px;font-weight:700;color:var(--ink-dim)}
+.au-row input[type=range]{flex:1;min-width:0;-webkit-appearance:none;appearance:none;height:6px;border-radius:3px;background:rgba(255,255,255,.14);outline:none;cursor:pointer}
+.au-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--gold);cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.45)}
+.au-row input[type=range]::-moz-range-thumb{width:18px;height:18px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+.au-val{width:46px;text-align:right;font-size:13px;font-weight:700;color:var(--ink-faint);font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -288,8 +298,20 @@ details.help[open] summary::before{content:"▾ "}
     <button class="chat-send" data-action="chatSendText">送出</button>
   </div>
 </div>
-<input type="file" id="avatar-file" accept="image/*" style="display:none">
-<input type="file" id="chatimg-file" accept="image/*" style="display:none">
+<!-- 音訊設定 -->
+<div id="audiomodal" class="modal hidden">
+  <div class="modal-card">
+    <div class="modal-title">🔊 <span id="au-title">音訊設定</span></div>
+    <div class="au-row"><span class="au-lbl" id="au-l1">主音量</span><input type="range" id="au-master" min="0" max="100"><span class="au-val" id="au-v1">80%</span></div>
+    <div class="au-row"><span class="au-lbl" id="au-l2">音樂</span><input type="range" id="au-music" min="0" max="100"><span class="au-val" id="au-v2">50%</span></div>
+    <div class="au-row"><span class="au-lbl" id="au-l3">音效</span><input type="range" id="au-sfx" min="0" max="100"><span class="au-val" id="au-v3">80%</span></div>
+    <div class="row" style="justify-content:flex-end;gap:9px;margin-top:18px">
+      <button class="btn btn-ghost btn-sm" style="width:auto;padding:11px 16px" data-action="audioTest" id="au-test">🔊 測試</button>
+      <button class="btn btn-primary btn-sm" style="width:auto;padding:11px 20px" data-action="audioDone" id="au-done">完成</button>
+    </div>
+  </div>
+</div>
+<input type="file" id="avatar-file" accept="image/*" style="display:none"><input type="file" id="chatimg-file" accept="image/*" style="display:none">
 <input type="file" id="chatgif-file" accept="image/gif" style="display:none">
 
 <script type="module">
@@ -554,6 +576,14 @@ const I18N = {
   enterPassword:['這個房間需要密碼：','这个房间需要密码：','This room needs a password:','この部屋はパスワードが必要：','이 방은 비밀번호가 필요:'],
   botName:      ['電腦','电脑','CPU','CPU','CPU'],
   roomSuffix:   [' 的房間',' 的房间','\u2019s Room','の部屋','의 방'],
+  // 音訊
+  audio:        ['背景音樂','背景音乐','Audio','音声','오디오'],
+  audioSettings:['音訊設定','音频设定','Audio Settings','音声設定','오디오 설정'],
+  volMaster:    ['主音量','主音量','Master','マスター','전체'],
+  volMusic:     ['音樂','音乐','Music','音楽','음악'],
+  volSfx:       ['音效','音效','Sound FX','効果音','효과음'],
+  audioTest:    ['測試','测试','Test','テスト','테스트'],
+  audioDone:    ['完成','完成','Done','完了','완료'],
   howtoBody:    ['每人取一個 2～8 字的祕密名字。開場公開幾秒讓大家記住後蓋牌，系統兩兩配對，倒數 3・2・1 翻牌——誰先「唸出」對方名字誰得 1 分。全部對戰完，分數最高者勝（同分並列）。搶答需要麥克風，建議用電腦或 Android 的 Chrome。','每人取一个 2～8 字的秘密名字。开场公开几秒记住后盖牌，系统两两配对，倒数 3・2・1 翻牌——谁先「念出」对方名字谁得 1 分。全部对战完，分数最高者胜（同分并列）。抢答需要麦克风，建议用电脑或 Android 的 Chrome。','Each player picks a 2–8 char secret name. Names show briefly, then hide. Pairs are matched, 3-2-1, cards flip — first to SAY the opponent\'s name scores 1. Highest score wins (ties allowed). Needs a mic; Chrome on PC/Android recommended.','各自2〜8文字の秘密の名前を決めます。数秒公開後に伏せ、2人ずつ対戦、3・2・1でめくり、先に相手の名前を言えば1点。最高得点で勝ち（同点は並列）。マイクが必要、PC/AndroidのChrome推奨。','각자 2~8자 비밀 이름을 정합니다. 잠깐 공개 후 숨기고, 둘씩 짝지어 3-2-1에 뒤집어 상대 이름을 먼저 말하면 1점. 최고 점수 승(동점 허용). 마이크 필요, PC/Android Chrome 권장.'],
 };
 function T(key){
@@ -712,6 +742,146 @@ function avatarImg(uidOrPlayer, cls){
   const data = (uid && S.avatarCache[uid]) || (uid===S.uid ? S.avatar : '') || '';
   const src = data || DEFAULT_AVATAR;
   return `<span class="pav ${cls||''}" style="overflow:hidden;padding:0"><img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover;display:block"></span>`;
+}
+
+/* ================================================================
+   音訊：場景音樂（1／2 隨機）＋ 音效 ＋ 主音量／音樂／音效
+   音檔放在 index.html 旁邊的 audio/ 資料夾，邊下載邊播、播過就會被瀏覽器快取
+   ================================================================ */
+const AUDIO_BASE = 'audio/';
+const MUSIC = {
+  lobby:  ['bgm1.mp3', 'bgm2.mp3'],    // 大廳／等待室（隨機一首）
+  naming: ['name.mp3'],                // 命名階段
+  game:   ['game1.mp3', 'game2.mp3']   // 公開 → 對決 → 結算（隨機一首）
+};
+const SFX_SRC = { count5:'count5.mp3', hit:'hit.mp3' };
+
+function loadAudioCfg(){
+  try {
+    const s = JSON.parse(localStorage.getItem('nd_audio') || 'null');
+    if (s && typeof s.master === 'number') return { master:s.master, music:s.music, sfx:s.sfx };
+  } catch {}
+  return { master:0.8, music:0.5, sfx:0.8 };
+}
+const A = Object.assign(
+  { el:null, scene:null, unlocked:false, sfxCache:{}, lastWinRound:-1 },
+  loadAudioCfg()
+);
+function saveAudioCfg(){
+  try { localStorage.setItem('nd_audio', JSON.stringify({ master:A.master, music:A.music, sfx:A.sfx })); } catch {}
+}
+const musicVol = () => A.master * A.music;
+const sfxVol   = () => A.master * A.sfx;
+
+function fadeTo(el, target, ms){
+  if (!el) return;
+  clearInterval(el._fade);
+  const from = el.volume || 0, steps = Math.max(1, Math.round(ms/50));
+  let i = 0;
+  el._fade = setInterval(()=>{
+    i++;
+    try { el.volume = Math.max(0, Math.min(1, from + (target-from)*(i/steps))); } catch {}
+    if (i >= steps){ clearInterval(el._fade); if (target === 0){ try { el.pause(); } catch {} } }
+  }, 50);
+}
+function stopMusic(){ if (A.el){ fadeTo(A.el, 0, 400); A.el = null; } }
+function playMusic(file){
+  const old = A.el;
+  const el = new Audio(AUDIO_BASE + file);
+  el.loop = true; el.volume = 0; el.preload = 'auto';
+  A.el = el;
+  el.play().then(()=>{
+    A.unlocked = true;
+    fadeTo(el, musicVol(), 700);
+    if (old) fadeTo(old, 0, 500);          // 交叉淡出，不會硬切
+  }).catch(()=>{
+    A.el = old;                            // 瀏覽器擋播（還沒互動）→ 等使用者一動就補播
+  });
+}
+function setMusicScene(scene){
+  if (A.scene === scene) return;
+  A.scene = scene;
+  const list = MUSIC[scene];
+  if (!list || !list.length){ stopMusic(); return; }
+  playMusic(list[Math.floor(Math.random()*list.length)]);   // 有 1／2 就隨機挑一首
+}
+function playSfx(name){
+  const f = SFX_SRC[name]; if (!f) return;
+  let el = A.sfxCache[name];
+  if (!el){ el = A.sfxCache[name] = new Audio(AUDIO_BASE + f); el.preload = 'auto'; }
+  try { el.currentTime = 0; el.volume = sfxVol(); el.play().catch(()=>{}); } catch {}
+}
+function applyVolumes(){
+  if (A.el){ clearInterval(A.el._fade); try { A.el.volume = musicVol(); } catch {} }
+}
+/* 瀏覽器規定：一定要使用者先互動過才能播聲音 */
+function unlockAudio(){
+  if (A.unlocked) return;
+  A.unlocked = true;
+  const s = A.scene;
+  if (s){ A.scene = null; setMusicScene(s); }   // 重新套用目前場景
+}
+/* 畫面 → 音樂場景 */
+function sceneForKey(key){
+  if (!key || key === 'boot') return null;
+  if (key === 'mic-test') return null;              // 測麥克風時保持安靜，避免音樂被麥克風收進去
+  if (key.startsWith('g-name')) return 'naming';
+  if (key === 'g-reveal' || key === 'g-prep' || key === 'g-result' || key.startsWith('g-duel')) return 'game';
+  return 'lobby';                                   // gate／lang／lobby／wait／local-setup
+}
+/* 換畫面時：切音樂、放音效 */
+function audioOnKeyChange(key){
+  setMusicScene(sceneForKey(key));
+  if (key.startsWith('g-name')) A.lastWinRound = -1;     // 新的一局，重置
+  if (key === 'g-prep') playSfx('count5');               // 5 秒準備倒數
+  if (key.startsWith('g-duel')){
+    const g = S.room && S.room.game, m = g && g.matchup;
+    if (m && m.winner && m.winner !== 'none' && A.lastWinRound !== g.currentRound){
+      A.lastWinRound = g.currentRound;
+      playSfx('hit');                                    // 有人喊對名字
+    }
+  }
+}
+/* 音訊設定面板 */
+function openAudioPanel(){
+  document.getElementById('audiomodal')?.classList.remove('hidden');
+  syncAudioPanel();
+}
+function closeAudioPanel(){ document.getElementById('audiomodal')?.classList.add('hidden'); }
+function syncAudioPanel(){
+  const set=(id,v)=>{ const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('au-title', T('audioSettings')); set('au-l1', T('volMaster'));
+  set('au-l2', T('volMusic')); set('au-l3', T('volSfx'));
+  set('au-done', T('audioDone'));
+  const tb=document.getElementById('au-test'); if(tb) tb.textContent='🔊 '+T('audioTest');
+  const rows=[['au-master','au-v1','master'],['au-music','au-v2','music'],['au-sfx','au-v3','sfx']];
+  for (const [rid,vid,k] of rows){
+    const r=document.getElementById(rid); if(r) r.value=Math.round(A[k]*100);
+    const v=document.getElementById(vid); if(v) v.textContent=Math.round(A[k]*100)+'%';
+  }
+}
+function initAudio(){
+  // 任何一次點擊／觸控都能解鎖播放
+  document.addEventListener('pointerdown', unlockAudio, { once:true });
+  document.addEventListener('keydown', unlockAudio, { once:true });
+  const modal = document.getElementById('audiomodal');
+  modal?.addEventListener('click', e=>{
+    if (e.target === modal){ closeAudioPanel(); return; }        // 點背景關閉
+    const b = e.target.closest('[data-action]'); if (!b) return;
+    if (b.dataset.action === 'audioDone') closeAudioPanel();
+    else if (b.dataset.action === 'audioTest'){ unlockAudio(); playSfx('hit'); }
+  });
+  const bind=(rid,vid,k)=>{
+    const r=document.getElementById(rid); if(!r) return;
+    r.addEventListener('input', ()=>{
+      A[k] = (parseInt(r.value)||0)/100;
+      const v=document.getElementById(vid); if(v) v.textContent=Math.round(A[k]*100)+'%';
+      applyVolumes(); saveAudioCfg();
+      if (k==='sfx'){ clearTimeout(A._sfxT); A._sfxT=setTimeout(()=>playSfx('hit'), 250); }  // 拉音效時順便試聽
+    });
+  };
+  bind('au-master','au-v1','master'); bind('au-music','au-v2','music'); bind('au-sfx','au-v3','sfx');
+  syncAudioPanel();
 }
 
 /* ---------------- 聊天室（存 RTDB chats/$roomId，媒體壓縮成 base64）---------------- */
@@ -1366,6 +1536,7 @@ function matchName(transcript, target){
    認證 + 連線狀態
    ========================================================= */
 if (FB_OK){
+  initAudio();
   initChat();
   if (S.avatar) S.avatarCache['__me']=S.avatar;
   onValue(ref(db, '.info/serverTimeOffset'), s => { S.serverOffset = s.val() || 0; });
@@ -1394,6 +1565,7 @@ if (FB_OK){
   }, 6000);
 } else {
   // 沒有設定 Firebase：仍可使用本機測試與麥克風測試
+  initAudio();
   initChat();
   S.uid = 'local-' + Math.random().toString(36).slice(2,8);
   if (S.avatar) S.avatarCache[S.uid]=S.avatar;
@@ -1784,6 +1956,7 @@ function render(){
     S.lastKey = key;
     S.speech && S.speech.stop();
     buildScreen(key);
+    audioOnKeyChange(key);   // 切場景音樂、放倒數／命中音效
   } else {
     patchScreen(key);
   }
@@ -2127,6 +2300,7 @@ function screenLobby(){
           <div><div class="eyebrow">${T('welcome')}</div><div style="font-weight:800;font-size:19px;margin-top:2px">${esc(S.nickname)}</div></div>
         </div>
         <div class="row wrap" style="width:auto;gap:8px;justify-content:flex-end">
+          <button class="btn btn-ghost btn-sm" data-action="openAudio">🔊 ${T('audio')}</button>
           <button class="btn btn-ghost btn-sm" data-action="openLang">🌐 ${langName()}</button>
           <button class="btn btn-ghost btn-sm" data-action="editNick">${T('editNick')}</button>
           <button class="btn btn-ghost btn-sm" data-action="toggleHowto" aria-expanded="${S.howtoOpen?'true':'false'}">${T('howto')}</button>
@@ -2640,6 +2814,7 @@ app.addEventListener('click', e => {
     case 'editNick': S.editingNick=true; S.lastKey=null; render(); break;
     case 'cancelNick': S.editingNick=false; S.lastKey=null; render(); break;
     case 'openLang': S.langPick=true; S.lastKey=null; render(); break;
+    case 'openAudio': openAudioPanel(); break;
     // 直接切 class，不重建畫面（才不會清掉你正在輸入的房號）
     case 'toggleHowto':
       S.howtoOpen = !S.howtoOpen;
