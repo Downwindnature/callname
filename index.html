@@ -153,8 +153,10 @@ label.f{display:block;font:700 12px/1 var(--font-disp);letter-spacing:.12em;text
 @keyframes winpop{from{transform:scale(.9)}to{transform:scale(1)}}
 .stage .spot{position:absolute;top:-30px;left:50%;transform:translateX(-50%);width:260px;height:200px;border-radius:50%;filter:blur(30px);opacity:.5;pointer-events:none;z-index:-1;background:radial-gradient(circle,rgba(255,179,64,.35),transparent 70%)}
 
-.duelcount{position:absolute;inset:0;display:grid;place-items:center;z-index:3;pointer-events:none}
-.duelcount span{font:700 76px var(--font-disp);background:linear-gradient(180deg,#fff,var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent;animation:cpulse .85s ease-out}
+.vswrap{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-width:62px}
+/* 倒數數字放在 VS 上方（保留固定高度，翻牌時版面不會跳動） */
+.duelcount{min-height:60px;display:grid;place-items:center;pointer-events:none}
+.duelcount span{font:700 54px/1 var(--font-disp);background:linear-gradient(180deg,#fff,var(--amber));-webkit-background-clip:text;background-clip:text;color:transparent;animation:cpulse .85s ease-out}
 
 /* ---------- speak panel ---------- */
 .speak{margin-top:14px;padding:16px;border-radius:var(--radius-sm);text-align:center;background:linear-gradient(160deg,rgba(255,92,138,.12),rgba(46,27,92,.5));border:1px solid rgba(255,92,138,.3)}
@@ -769,7 +771,7 @@ const MUSIC = {
   naming: ['name.mp3'],                // 命名階段
   game:   ['game1.mp3', 'game2.mp3']   // 公開 → 對決 → 結算（隨機一首）
 };
-const SFX_SRC = { count5:'count5.mp3', hit:'hit.mp3' };
+const SFX_SRC = { count5:'count5.mp3', count3:'count3.mp3', hit:'hit.mp3' };
 
 function loadAudioCfg(){
   try {
@@ -779,7 +781,7 @@ function loadAudioCfg(){
   return { master:0.8, music:0.5, sfx:0.8 };
 }
 const A = Object.assign(
-  { el:null, scene:null, unlocked:false, sfxCache:{}, lastWinRound:-1, baseIdx:0 },
+  { el:null, scene:null, unlocked:false, sfxCache:{}, lastCountKey:'', lastWinKey:'', baseIdx:0 },
   loadAudioCfg()
 );
 function saveAudioCfg(){
@@ -897,13 +899,17 @@ function sceneForKey(key){
 /* 換畫面時：切音樂、放音效 */
 function audioOnKeyChange(key){
   setMusicScene(sceneForKey(key));
-  if (key.startsWith('g-name')) A.lastWinRound = -1;     // 新的一局，重置
-  if (key === 'g-prep') playSfx('count5');               // 5 秒準備倒數
+  if (key === 'g-prep') playSfx('count5');                 // 準備階段 5 秒倒數
   if (key.startsWith('g-duel')){
     const g = S.room && S.room.game, m = g && g.matchup;
-    if (m && m.winner && m.winner !== 'none' && A.lastWinRound !== g.currentRound){
-      A.lastWinRound = g.currentRound;
-      playSfx('hit');                                    // 有人喊對名字
+    if (!g || !m) return;
+    // 用「局:回合」當鍵（含 gameId）：再玩一局時回合歸零也不會被舊紀錄擋住而不出聲
+    const rk = claimKey(g);
+    if (!m.revealed && A.lastCountKey !== rk){
+      A.lastCountKey = rk; playSfx('count3');              // 翻牌前 3・2・1 倒數
+    }
+    if (m.winner && m.winner !== 'none' && A.lastWinKey !== rk){
+      A.lastWinKey = rk; playSfx('hit');                   // 有人喊對名字
     }
   }
 }
@@ -2709,10 +2715,12 @@ function screenDuel(){
       <div class="spot"></div>
       <div class="plates">
         ${plateHtml('a', pa, revealed, m.winner===m.a)}
-        <div class="vs">VS</div>
+        <div class="vswrap">
+          <div class="duelcount">${!revealed ? `<span id="dc-num">3</span>` : ''}</div>
+          <div class="vs">VS</div>
+        </div>
         ${plateHtml('b', pb, revealed, m.winner===m.b)}
       </div>
-      ${!revealed ? `<div class="duelcount"><span id="dc-num">3</span></div>` : ''}
     </div>`;
 
   let panel = '';
