@@ -587,7 +587,7 @@ const I18N = {
   volSfx:       ['音效','音效','Sound FX','効果音','효과음'],
   audioTest:    ['測試','测试','Test','テスト','테스트'],
   audioDone:    ['完成','完成','Done','完了','완료'],
-  audioMissing: ['找不到音檔：請確認 audio 資料夾已跟 index.html 一起上傳','找不到音频：请确认 audio 文件夹已跟 index.html 一起上传','Audio files not found — upload the audio folder next to index.html','音声ファイルが見つかりません。audioフォルダをindex.htmlと一緒にアップロードしてください','오디오 파일 없음 — audio 폴더를 index.html과 함께 업로드하세요'],
+  audioMissing: ['找不到音檔：請確認 mp3 已上傳（放 audio 資料夾或與 index.html 同層皆可）','找不到音频：请确认 mp3 已上传（放 audio 文件夹或与 index.html 同层皆可）','Audio files not found — upload the mp3s (in an audio folder or next to index.html)','音声ファイルが見つかりません（audioフォルダまたはindex.htmlと同じ場所に配置）','오디오 파일 없음 — mp3를 업로드하세요(audio 폴더 또는 index.html과 같은 위치)'],
   audioMuted:   ['主音量是 0，請往右拉','主音量是 0，请往右拉','Master volume is 0 — slide it up','マスター音量が0です','전체 음량이 0입니다'],
   audioSfxZero: ['音效音量是 0，請往右拉','音效音量是 0，请往右拉','SFX volume is 0 — slide it up','効果音が0です','효과음이 0입니다'],
   howtoBody:    ['每人取一個 2～8 字的祕密名字。開場公開幾秒讓大家記住後蓋牌，系統兩兩配對，倒數 3・2・1 翻牌——誰先「唸出」對方名字誰得 1 分。全部對戰完，分數最高者勝（同分並列）。搶答需要麥克風，建議用電腦或 Android 的 Chrome。','每人取一个 2～8 字的秘密名字。开场公开几秒记住后盖牌，系统两两配对，倒数 3・2・1 翻牌——谁先「念出」对方名字谁得 1 分。全部对战完，分数最高者胜（同分并列）。抢答需要麦克风，建议用电脑或 Android 的 Chrome。','Each player picks a 2–8 char secret name. Names show briefly, then hide. Pairs are matched, 3-2-1, cards flip — first to SAY the opponent\'s name scores 1. Highest score wins (ties allowed). Needs a mic; Chrome on PC/Android recommended.','各自2〜8文字の秘密の名前を決めます。数秒公開後に伏せ、2人ずつ対戦、3・2・1でめくり、先に相手の名前を言えば1点。最高得点で勝ち（同点は並列）。マイクが必要、PC/AndroidのChrome推奨。','각자 2~8자 비밀 이름을 정합니다. 잠깐 공개 후 숨기고, 둘씩 짝지어 3-2-1에 뒤집어 상대 이름을 먼저 말하면 1점. 최고 점수 승(동점 허용). 마이크 필요, PC/Android Chrome 권장.'],
@@ -760,7 +760,10 @@ function avatarImg(uidOrPlayer, cls){
    音訊：場景音樂（1／2 隨機）＋ 音效 ＋ 主音量／音樂／音效
    音檔放在 index.html 旁邊的 audio/ 資料夾，邊下載邊播、播過就會被瀏覽器快取
    ================================================================ */
-const AUDIO_BASE = 'audio/';
+/* 音檔位置：可能放在 audio/ 資料夾裡，也可能直接跟 index.html 平放（GitHub 上傳常會把資料夾攤平）。
+   兩個都會找，找到哪個就記住哪個，不用重傳檔案。 */
+const AUDIO_BASES = ['audio/', ''];
+const AUDIO_BASE = 'audio/';   // 僅作預設顯示用
 const MUSIC = {
   lobby:  ['bgm1.mp3', 'bgm2.mp3'],    // 大廳／等待室（隨機一首）
   naming: ['name.mp3'],                // 命名階段
@@ -776,7 +779,7 @@ function loadAudioCfg(){
   return { master:0.8, music:0.5, sfx:0.8 };
 }
 const A = Object.assign(
-  { el:null, scene:null, unlocked:false, sfxCache:{}, lastWinRound:-1 },
+  { el:null, scene:null, unlocked:false, sfxCache:{}, lastWinRound:-1, baseIdx:0 },
   loadAudioCfg()
 );
 function saveAudioCfg(){
@@ -800,7 +803,7 @@ function stopMusic(){ if (A.el){ fadeTo(A.el, 0, 400); A.el = null; } }
 /* 音檔載不到時要講出來，不能安靜地不出聲（多半是 audio 資料夾沒上傳） */
 function audioMissing(src){
   if (A._warned) return; A._warned = true;
-  console.error('[音訊] 載入失敗：', src, '→ 請確認 audio 資料夾有跟 index.html 一起上傳到同一層');
+  console.error('[音訊] 找不到音檔：', src, '→ mp3 可放在 audio/ 資料夾，或直接與 index.html 同一層，兩種都支援');
   try { toast(T('audioMissing'), 'err'); } catch {}
 }
 /* 瀏覽器要求「使用者互動過」才准播；被擋下就重新掛一次監聽，等下一次點擊補播。
@@ -818,22 +821,31 @@ function armUnlock(){
   document.addEventListener('pointerdown', go, { once:true });
   document.addEventListener('keydown', go, { once:true });
 }
-function playMusic(file){
+function playMusic(file, bi){
+  if (bi === undefined) bi = A.baseIdx || 0;
+  const base = AUDIO_BASES[bi];
+  if (base === undefined){ audioMissing(file); return; }   // 兩個位置都找過了
   const old = A.el;
-  const src = AUDIO_BASE + file;
+  const src = base + file;
   const el = new Audio(src);
   el.loop = true; el.volume = 0; el.preload = 'auto';
-  el.onerror = ()=>{ if (A.el === el) A.el = old; audioMissing(src); };
+  // 這個位置沒有 → 換下一個位置再找
+  const fallback = ()=>{
+    if (A.el === el) A.el = old;
+    if (bi + 1 < AUDIO_BASES.length) playMusic(file, bi + 1);
+    else audioMissing(src);
+  };
+  el.onerror = fallback;
   A.el = el;
   el.play().then(()=>{
+    A.baseIdx = bi;                        // 記住有效的位置，之後直接用
     A.unlocked = true; A._warned = false;
     fadeTo(el, musicVol(), 700);
     if (old) fadeTo(old, 0, 500);          // 交叉淡出，不會硬切
   }).catch((err)=>{
-    A.el = old;
     const name = err && err.name;
-    if (name === 'NotAllowedError'){ armUnlock(); return; }   // 還沒互動，正常，等一下補播
-    audioMissing(src);                                        // 其他（404／格式不支援）→ 明講
+    if (name === 'NotAllowedError'){ A.el = old; armUnlock(); return; }   // 還沒互動，正常
+    fallback();                                                           // 找不到 → 換位置
   });
 }
 function setMusicScene(scene){
@@ -843,21 +855,26 @@ function setMusicScene(scene){
   if (!list || !list.length){ stopMusic(); return; }
   playMusic(list[Math.floor(Math.random()*list.length)]);   // 有 1／2 就隨機挑一首
 }
-function playSfx(name){
+function playSfx(name, bi){
   const f = SFX_SRC[name]; if (!f) return;
-  const src = AUDIO_BASE + f;
-  let el = A.sfxCache[name];
-  if (!el){
-    el = A.sfxCache[name] = new Audio(src);
-    el.preload = 'auto';
-    el.onerror = ()=> audioMissing(src);
-  }
+  if (bi === undefined) bi = A.baseIdx || 0;
+  const base = AUDIO_BASES[bi];
+  if (base === undefined){ audioMissing(f); return; }
+  const src = base + f;
+  let el = A.sfxCache[src];                       // 用完整路徑當快取鍵，換位置不會拿到舊的
+  if (!el){ el = A.sfxCache[src] = new Audio(src); el.preload = 'auto'; }
+  const fallback = ()=>{
+    delete A.sfxCache[src];
+    if (bi + 1 < AUDIO_BASES.length) playSfx(name, bi + 1);
+    else audioMissing(src);
+  };
+  el.onerror = fallback;
   try {
     el.currentTime = 0; el.volume = sfxVol();
-    el.play().catch((err)=>{
+    el.play().then(()=>{ A.baseIdx = bi; A._warned = false; }).catch((err)=>{
       const n = err && err.name;
       if (n === 'NotAllowedError'){ armUnlock(); return; }
-      audioMissing(src);
+      fallback();
     });
   } catch {}
 }
