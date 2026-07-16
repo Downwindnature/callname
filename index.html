@@ -162,6 +162,8 @@ label.f{display:block;font:700 12px/1 var(--font-disp);letter-spacing:.12em;text
 .speak .target{font-weight:900;font-size:30px;margin:2px 0 10px;letter-spacing:-.01em;word-break:break-word}
 .mic{display:inline-flex;align-items:center;gap:9px;padding:9px 15px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid var(--line);font-size:13px;font-weight:700;color:var(--ink-dim)}
 .mic .dot{width:10px;height:10px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 0 rgba(255,107,107,.6);animation:micpulse 1.2s infinite}
+.mic.off{opacity:.6}
+.mic.off .dot{background:var(--ink-faint);animation:none;box-shadow:none}
 @keyframes micpulse{0%{box-shadow:0 0 0 0 rgba(255,107,107,.55)}70%{box-shadow:0 0 0 10px rgba(255,107,107,0)}100%{box-shadow:0 0 0 0 rgba(255,107,107,0)}}
 .transcript{margin-top:11px;min-height:22px;font-size:15px;color:var(--ink);font-weight:600;word-break:break-word}
 .transcript:empty::before{content:"…聆聽中";color:var(--ink-faint);font-weight:400}
@@ -515,6 +517,7 @@ const I18N = {
   prepMatching: ['系統正在隨機配對每一組對戰','系统正在随机配对每一组对战','Pairing up the matches…','対戦を組んでいます…','대전을 짜는 중…'],
   roundPrefix:  ['回合','回合','Round','ラウンド','라운드'],
   micListening: ['麥克風聆聽中','麦克风聆听中','Mic listening','マイク聞き取り中','마이크 듣는 중'],
+  micConnecting:['麥克風啟動中…','麦克风启动中…','Starting mic…','マイク起動中…','마이크 시작 중…'],
   noVoiceBrowser:['此瀏覽器不支援語音辨識','此浏览器不支持语音识别','Voice recognition unsupported','音声認識非対応','음성 인식 미지원'],
   useChrome:    ['請改用 Chrome 才能搶答','请改用 Chrome 才能抢答','Use Chrome to answer','Chromeをご利用ください','Chrome을 사용하세요'],
   spectateHint: ['觀戰中 —— 看誰先喊出對方名字','观战中 —— 看谁先喊出对方名字','Spectating — who says it first?','観戦中 — 誰が先に言う？','관전 중 — 누가 먼저?'],
@@ -584,6 +587,9 @@ const I18N = {
   volSfx:       ['音效','音效','Sound FX','効果音','효과음'],
   audioTest:    ['測試','测试','Test','テスト','테스트'],
   audioDone:    ['完成','完成','Done','完了','완료'],
+  audioMissing: ['找不到音檔：請確認 audio 資料夾已跟 index.html 一起上傳','找不到音频：请确认 audio 文件夹已跟 index.html 一起上传','Audio files not found — upload the audio folder next to index.html','音声ファイルが見つかりません。audioフォルダをindex.htmlと一緒にアップロードしてください','오디오 파일 없음 — audio 폴더를 index.html과 함께 업로드하세요'],
+  audioMuted:   ['主音量是 0，請往右拉','主音量是 0，请往右拉','Master volume is 0 — slide it up','マスター音量が0です','전체 음량이 0입니다'],
+  audioSfxZero: ['音效音量是 0，請往右拉','音效音量是 0，请往右拉','SFX volume is 0 — slide it up','効果音が0です','효과음이 0입니다'],
   howtoBody:    ['每人取一個 2～8 字的祕密名字。開場公開幾秒讓大家記住後蓋牌，系統兩兩配對，倒數 3・2・1 翻牌——誰先「唸出」對方名字誰得 1 分。全部對戰完，分數最高者勝（同分並列）。搶答需要麥克風，建議用電腦或 Android 的 Chrome。','每人取一个 2～8 字的秘密名字。开场公开几秒记住后盖牌，系统两两配对，倒数 3・2・1 翻牌——谁先「念出」对方名字谁得 1 分。全部对战完，分数最高者胜（同分并列）。抢答需要麦克风，建议用电脑或 Android 的 Chrome。','Each player picks a 2–8 char secret name. Names show briefly, then hide. Pairs are matched, 3-2-1, cards flip — first to SAY the opponent\'s name scores 1. Highest score wins (ties allowed). Needs a mic; Chrome on PC/Android recommended.','各自2〜8文字の秘密の名前を決めます。数秒公開後に伏せ、2人ずつ対戦、3・2・1でめくり、先に相手の名前を言えば1点。最高得点で勝ち（同点は並列）。マイクが必要、PC/AndroidのChrome推奨。','각자 2~8자 비밀 이름을 정합니다. 잠깐 공개 후 숨기고, 둘씩 짝지어 3-2-1에 뒤집어 상대 이름을 먼저 말하면 1점. 최고 점수 승(동점 허용). 마이크 필요, PC/Android Chrome 권장.'],
 };
 function T(key){
@@ -627,7 +633,7 @@ const S = {
   selectedLang: null,  // 命名時選的語系
   createLang: 'zh-TW',  // 建立房間：房主指定的名字語言（全房統一）
   speech: null,
-  claimedRound: -1,    // 本回合是否已喊出
+  claimedKey: '',      // 已搶答過的「局:回合」（含 gameId，避免新的一局被舊紀錄擋住）
   micTest: false,      // 測試麥克風畫面
   micTestLang: null,
   micTestListening: false,
@@ -658,6 +664,12 @@ function serverNow(){ return Date.now() + S.serverOffset; }
 /* ---------------- 小工具 ---------------- */
 const $ = (sel, root=document) => root.querySelector(sel);
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+/* 搶答鎖的鍵：一定要含 gameId，否則「再玩一局」時回合數歸零，
+   上一局搶到過的人會被誤判成「已搶過」而完全無法辨識。 */
+function claimKey(g){
+  if (!g) return '';
+  return (g.gameId || '') + ':' + (g.currentRound == null ? -1 : g.currentRound);
+}
 function avatarChar(name){ const a = [...String(name||'')]; return a.length ? a[0] : '?'; }
 /* 房間的名字語言（房主指定，全房統一）。相容舊資料：沒有 lang 就取 languages 裡第一個開啟的 */
 function roomLang(r){
@@ -785,17 +797,43 @@ function fadeTo(el, target, ms){
   }, 50);
 }
 function stopMusic(){ if (A.el){ fadeTo(A.el, 0, 400); A.el = null; } }
+/* 音檔載不到時要講出來，不能安靜地不出聲（多半是 audio 資料夾沒上傳） */
+function audioMissing(src){
+  if (A._warned) return; A._warned = true;
+  console.error('[音訊] 載入失敗：', src, '→ 請確認 audio 資料夾有跟 index.html 一起上傳到同一層');
+  try { toast(T('audioMissing'), 'err'); } catch {}
+}
+/* 瀏覽器要求「使用者互動過」才准播；被擋下就重新掛一次監聽，等下一次點擊補播。
+   （不能只掛一次：若使用者在畫面出來前就先點了，那次解鎖會被白白用掉。） */
+function armUnlock(){
+  if (A._armed) return;
+  A._armed = true;
+  const go = ()=>{
+    A._armed = false;
+    document.removeEventListener('pointerdown', go);
+    document.removeEventListener('keydown', go);
+    const s = A.scene; A.scene = null;
+    if (s) setMusicScene(s);
+  };
+  document.addEventListener('pointerdown', go, { once:true });
+  document.addEventListener('keydown', go, { once:true });
+}
 function playMusic(file){
   const old = A.el;
-  const el = new Audio(AUDIO_BASE + file);
+  const src = AUDIO_BASE + file;
+  const el = new Audio(src);
   el.loop = true; el.volume = 0; el.preload = 'auto';
+  el.onerror = ()=>{ if (A.el === el) A.el = old; audioMissing(src); };
   A.el = el;
   el.play().then(()=>{
-    A.unlocked = true;
+    A.unlocked = true; A._warned = false;
     fadeTo(el, musicVol(), 700);
     if (old) fadeTo(old, 0, 500);          // 交叉淡出，不會硬切
-  }).catch(()=>{
-    A.el = old;                            // 瀏覽器擋播（還沒互動）→ 等使用者一動就補播
+  }).catch((err)=>{
+    A.el = old;
+    const name = err && err.name;
+    if (name === 'NotAllowedError'){ armUnlock(); return; }   // 還沒互動，正常，等一下補播
+    audioMissing(src);                                        // 其他（404／格式不支援）→ 明講
   });
 }
 function setMusicScene(scene){
@@ -807,19 +845,29 @@ function setMusicScene(scene){
 }
 function playSfx(name){
   const f = SFX_SRC[name]; if (!f) return;
+  const src = AUDIO_BASE + f;
   let el = A.sfxCache[name];
-  if (!el){ el = A.sfxCache[name] = new Audio(AUDIO_BASE + f); el.preload = 'auto'; }
-  try { el.currentTime = 0; el.volume = sfxVol(); el.play().catch(()=>{}); } catch {}
+  if (!el){
+    el = A.sfxCache[name] = new Audio(src);
+    el.preload = 'auto';
+    el.onerror = ()=> audioMissing(src);
+  }
+  try {
+    el.currentTime = 0; el.volume = sfxVol();
+    el.play().catch((err)=>{
+      const n = err && err.name;
+      if (n === 'NotAllowedError'){ armUnlock(); return; }
+      audioMissing(src);
+    });
+  } catch {}
 }
 function applyVolumes(){
   if (A.el){ clearInterval(A.el._fade); try { A.el.volume = musicVol(); } catch {} }
 }
 /* 瀏覽器規定：一定要使用者先互動過才能播聲音 */
 function unlockAudio(){
-  if (A.unlocked) return;
   A.unlocked = true;
-  const s = A.scene;
-  if (s){ A.scene = null; setMusicScene(s); }   // 重新套用目前場景
+  if (!A.el && A.scene){ const s = A.scene; A.scene = null; setMusicScene(s); }   // 補播目前場景
 }
 /* 畫面 → 音樂場景 */
 function sceneForKey(key){
@@ -869,7 +917,13 @@ function initAudio(){
     if (e.target === modal){ closeAudioPanel(); return; }        // 點背景關閉
     const b = e.target.closest('[data-action]'); if (!b) return;
     if (b.dataset.action === 'audioDone') closeAudioPanel();
-    else if (b.dataset.action === 'audioTest'){ unlockAudio(); playSfx('hit'); }
+    else if (b.dataset.action === 'audioTest'){
+      unlockAudio();
+      A._warned = false;                       // 讓這次測試若失敗一定講得出來
+      if (A.master <= 0.01){ toast(T('audioMuted'), 'err'); return; }
+      if (A.sfx <= 0.01){ toast(T('audioSfxZero'), 'err'); return; }
+      playSfx('hit');
+    }
   });
   const bind=(rid,vid,k)=>{
     const r=document.getElementById(rid); if(!r) return;
@@ -1215,8 +1269,8 @@ function releaseMic(){
 
 class SpeechDuel {
   static supported(){ return 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window; }
-  constructor(){ this.rec=null; this.active=false; }
-  start(lang, testFn, { onMatch, onText, latch=true }){
+  constructor(){ this.rec=null; this.active=false; this.live=false; }
+  start(lang, testFn, { onMatch, onText, latch=true, onLive }){
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SR) return false;
     this.stop();
@@ -1226,6 +1280,7 @@ class SpeechDuel {
     rec.interimResults = true;
     rec.maxAlternatives = 6;
     let done = false;
+    rec.onstart = ()=>{ this.live = true; onLive && onLive(true); };
     rec.onresult = (e)=>{
       if (done) return;
       for (let i=e.resultIndex; i<e.results.length; i++){
@@ -1245,19 +1300,33 @@ class SpeechDuel {
       }
     };
     rec.onerror = (e)=>{
-      if (e && (e.error==='not-allowed' || e.error==='service-not-allowed')){
+      const err = e && e.error;
+      if (err==='not-allowed' || err==='service-not-allowed'){
         toast(T('micPermDenied'), 'err');
-        this.active=false;
+        this.active=false; this.live=false; onLive && onLive(false);
       }
+      // aborted／network／no-speech：交給 onend 自動重開，不中斷這一局
     };
-    rec.onend = ()=>{ if (this.active && !done){ try{ rec.start(); }catch{} } };
+    rec.onend = ()=>{
+      this.live = false; onLive && onLive(false);
+      if (this.active && !done) this._kick(rec, 0);   // 還在這一回合就自動接回去聽
+    };
     this.rec = rec; this.active = true;
-    try { rec.start(); } catch {}
+    this._kick(rec, 0);
     return true;
   }
+  // 上一個辨識還在關閉時 start() 會丟例外；以前直接吞掉 → 整回合都不會聽。改成重試。
+  _kick(rec, tries){
+    if (!this.active || this.rec !== rec) return;
+    try { rec.start(); }
+    catch (err){
+      if (String(err && err.name) === 'InvalidStateError') return;   // 已經在聽了
+      if (tries < 15) setTimeout(()=>this._kick(rec, tries+1), 120);
+    }
+  }
   stop(){
-    this.active=false;
-    if (this.rec){ try{ this.rec.onend=null; this.rec.stop(); }catch{} this.rec=null; }
+    this.active=false; this.live=false;
+    if (this.rec){ try{ this.rec.onend=null; this.rec.onstart=null; this.rec.stop(); }catch{} this.rec=null; }
   }
 }
 function normalize(s){
@@ -1621,7 +1690,7 @@ async function joinRoom(code){
 
 async function enterRoom(code){
   S.roomId = code;
-  S.claimedRound = -1;
+  S.claimedKey = '';
   S.acts = new Set();
   const pRef = ref(db, `rooms/${code}/players/${S.uid}`);
   onDisconnect(pRef).remove();               // 斷線自動離場
@@ -1666,7 +1735,7 @@ function cleanupRoomState(){
   releaseMic();
   unsubscribeChat(); closeChat();
   if (S.roomUnsub){ S.roomUnsub(); S.roomUnsub=null; }
-  S.roomId=null; S.room=null; S.isHost=false; S.lastKey=null; S.claimedRound=-1; S.acts=new Set();
+  S.roomId=null; S.room=null; S.isHost=false; S.lastKey=null; S.claimedKey=''; S.acts=new Set();
   updateChatFab();
 }
 
@@ -1756,18 +1825,18 @@ async function submitName(name, lang, reading){
 async function claimWin(){
   if (S.local){
     const g = S.room && S.room.game; if (!g || !g.matchup) return;
-    const round = g.currentRound; if (S.claimedRound === round) return;
+    const key = claimKey(g); if (S.claimedKey === key) return;
     const m = g.matchup;
     if (m.revealed && !m.winner && (S.uid===m.a || S.uid===m.b)){
-      S.claimedRound = round; m.winner = S.uid; m.winnerAt = Date.now();
+      S.claimedKey = key; m.winner = S.uid; m.winnerAt = Date.now();
       S.speech && S.speech.stop(); render();
     }
     return;
   }
   if (!S.roomId || !S.room || !S.room.game) return;
-  const round = S.room.game.currentRound;
-  if (S.claimedRound === round) return;
-  S.claimedRound = round;
+  const key = claimKey(S.room.game);
+  if (S.claimedKey === key) return;
+  S.claimedKey = key;
   const mRef = ref(db, `rooms/${S.roomId}/game/matchup`);
   await runTransaction(mRef, m => {
     if (!m || !m.revealed || m.winner) return;         // 尚未翻牌或已有人搶到
@@ -2176,7 +2245,7 @@ function startLocalGame(){
   if (!S._realUid) S._realUid = S.uid;
   S.uid = 'p0';
   S.local = true; S.localSetup = false;
-  S.claimedRound = -1; S.lastKey = null;
+  S.claimedKey = ''; S.lastKey = null;
   const myLang = (S.localBotLang && S.localBotLang!=='mix') ? S.localBotLang : 'zh-TW';
   S.room = {
     name:'本機測試', maxPlayers:count, hostId:'p0', state:'playing',
@@ -2193,7 +2262,7 @@ function localExit(){
   releaseMic();
   S.local=false; S.localSetup=false; S.room=null;
   if (S._realUid) S.uid = S._realUid;
-  S.claimedRound=-1; S.lastKey=null;
+  S.claimedKey=''; S.lastKey=null;
   render();
 }
 function startLocalMatchups(){
@@ -2203,7 +2272,7 @@ function startLocalMatchups(){
   const first = matchups[0];
   g.phase='matchup'; g.matchups=matchups; g.totalRounds=matchups.length; g.currentRound=0;
   g.matchup={ a:first.a, b:first.b, countdownEndAt:Date.now()+COUNTDOWN_MS, revealed:false, winner:null, scored:false };
-  S.claimedRound=-1;
+  S.claimedKey='';
   render();
 }
 function scheduleLocalBot(round){
@@ -2254,7 +2323,7 @@ function localTick(){
         const round=g.currentRound, next=round+1;
         if (next>=g.totalRounds){ g.phase='results'; g.matchup=null; }
         else { const pr=g.matchups[next]; g.currentRound=next; g.matchup={a:pr.a,b:pr.b,countdownEndAt:Date.now()+COUNTDOWN_MS,revealed:false,winner:null,scored:false}; }
-        S.claimedRound=-1; render();
+        S.claimedKey=''; render();
       }
     }
   }
@@ -2646,7 +2715,7 @@ function screenDuel(){
         <div class="speak">
           <div class="lead">${T('sayOpponent')}</div>
           <div class="target">${esc(opp.gameName)}</div>
-          <div class="mic"><span class="dot"></span> ${T('micListening')}</div>
+          <div class="mic off" id="micbox"><span class="dot"></span> <span id="miclbl">${T('micConnecting')}</span></div>
           <div class="transcript" id="ts"></div>
         </div>`;
     }
@@ -2674,12 +2743,18 @@ function screenDuel(){
   `;
 
   // 翻牌後啟動語音（只有對戰雙方）
-  if (revealed && !m.winner && iAmDuelist && SpeechDuel.supported() && S.claimedRound !== round){
+  if (revealed && !m.winner && iAmDuelist && SpeechDuel.supported() && S.claimedKey !== claimKey(g)){
     if (!S.speech) S.speech = new SpeechDuel();
     const oppTarget = { gameName: opp.gameName||'', gameLang: opp.gameLang||'zh-TW', reading: opp.gameReading||'' };
     S.speech.start(oppTarget.gameLang, (txt)=>matchName(txt, oppTarget), {
       onText: (txt)=>{ const el = $('#ts'); if (el) el.textContent = txt; },
-      onMatch: ()=>{ claimWin(); }
+      onMatch: ()=>{ claimWin(); },
+      // 讓指示燈說實話：真的在聽才亮紅點，沒接上就顯示灰的
+      onLive: (on)=>{
+        const box = $('#micbox'); if (!box) return;
+        box.classList.toggle('off', !on);
+        const lbl = $('#miclbl'); if (lbl) lbl.textContent = on ? T('micListening') : T('micConnecting');
+      }
     });
   }
 }
